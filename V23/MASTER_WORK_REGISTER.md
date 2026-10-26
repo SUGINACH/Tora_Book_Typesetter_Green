@@ -290,3 +290,12 @@
 ### מסמך מעבר בין שיחות
 - נקודת העבודה, קישורי הריצות, הכשל האחרון, דרישות המשתמש והצעדים הבאים מתועדים ב-`V23/SESSION_HANDOFF_2026-10-27.md`.
 - בתחילת שיחה חדשה יש לקרוא מסמך זה לפני שינוי קוד; נכון לכתיבתו, ריצת CLI האחרונה נכשלה ב-timeout ולכן שלב העקבות אינו מאומת.
+
+
+## 2026-10-27 — P0 CLI readiness timeout diagnosis (V23)
+
+**Status: investigation active; root cause not yet proven.** Latest failed run `40420451902` checked out `b5809ca3dccfce7962b68e6b96926c2242911feb`. `node --check` and `--help` succeeded; smoke failed at the readiness predicate in `tools/geometry-audit-cli.js` before settings load/typesetting, and no smoke report artifact was created. The predicate requires `window.typesetDocument` and `window.__geomAudit.audit`; the old error did not reveal which condition remained false or whether scripts threw errors.
+
+**Change in this commit:** failure-only browser readiness diagnostics report document state, required global types, script URLs, renderer flag, page errors, and console/request errors. No layout algorithm, settings, CSS, timeout policy, or trace behavior was changed. This is observability, not a verified fix.
+
+**Verification to run now:** (1) CLI smoke workflow; (2) full long-document workflow using `very_long_test_text.txt`, default settings and active ornament settings. Start runs and provide URLs without polling. If the smoke predicate still times out, use its diagnostic payload to identify the absent global/script error and correct that cause before claiming CLI success. After success, inspect trace completeness, repeat determinism, and rendered-layout parity. Branch V23 only; do not merge into V21.

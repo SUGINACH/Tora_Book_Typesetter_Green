@@ -756,7 +756,35 @@ async function main() {
         page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
         page.on('requestfailed', req => consoleErrors.push('Request failed: ' + req.url() + ' (' + (req.failure()?.errorText || 'unknown') + ')'));
         await page.goto(baseUrl + '/renderer.html', { waitUntil: 'load', timeout: args.timeoutMs });
-        await page.waitForFunction(() => typeof window.typesetDocument === 'function' && window.__geomAudit && typeof window.__geomAudit.audit === 'function', null, { timeout: 30000 });
+        try {
+            await page.waitForFunction(
+                () => typeof window.typesetDocument === 'function' &&
+                    !!window.__geomAudit && typeof window.__geomAudit.audit === 'function',
+                null,
+                { timeout: Math.min(30000, args.timeoutMs) }
+            );
+        } catch (waitError) {
+            // Preserve the readiness failure, but expose which browser global or script
+            // failed to initialize. Without this snapshot the original timeout hides the
+            // actual cause and makes a blind timeout increase tempting.
+            const readiness = await page.evaluate(() => ({
+                readyState: document.readyState,
+                typesetDocument: typeof window.typesetDocument,
+                geomAudit: typeof window.__geomAudit,
+                geomAuditAudit: typeof window.__geomAudit?.audit,
+                scripts: Array.from(document.scripts, script => ({
+                    src: script.src || '[inline]',
+                    ready: script.readyState || null
+                })),
+                scriptErrors: window.__geometryAuditScriptErrors || [],
+                renderer: window.__isRenderer === true
+            })).catch(e => ({ diagnosticError: String(e) }));
+            throw new Error(
+                'Renderer readiness predicate timed out. ' +
+                JSON.stringify({ timeoutMs: Math.min(30000, args.timeoutMs), readiness, pageErrors, consoleErrors }) +
+                '\\nOriginal wait error: ' + String(waitError)
+            );
+        }
 
         // renderer.html sets __isRenderer=true, so app.js intentionally skips its normal
         // window.onload initialization. That also skips loadDefaultSettings(); call it

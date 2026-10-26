@@ -1,3 +1,12 @@
+## 2026-10-27 — Diagnose renderer readiness timeout before changing layout behavior (V23)
+
+- Reviewed failed CLI run [40420451902](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40420451902) and its job log. Syntax and `--help` pass; the first smoke render fails at the renderer readiness `page.waitForFunction` after 30 seconds, before settings initialization or typesetting. Later smoke assertions are skipped and no smoke report is produced. Therefore this run provides no evidence about step-trace correctness or final layout.
+- Compared the readiness predicate against `renderer.html`: it requires both global `typesetDocument` and `window.__geomAudit.audit`. The previous error omitted the state of either global and any script/console errors, so the immediate cause is not yet proven. Do not increase the timeout or disable the recorder as a workaround.
+- Added failure-only readiness diagnostics to `tools/geometry-audit-cli.js`: on timeout, capture document readiness, the two required globals, script URLs, renderer mode, page errors, and console/request errors in the thrown message. Successful runs and pagination behavior are unchanged. This is a diagnostic step, not a claim that the underlying initialization defect is fixed.
+- Next: run CLI smoke and canonical `very_long_test_text.txt` long audit on this commit; inspect the new diagnostic if smoke still fails. Only after the actual initialization cause is identified should the functional correction be made. Keep V23 isolated from V21.
+
+---
+
 ## 2026-10-26 — Explicit diagnosis for global-justify rollback residuals (V23)
 
 - Verified the repaired CLI/long-document runs [40383419617](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40383419617) and [40383418797](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40383418797): both passed on commit `116a23329946c838383b6186c73f03312f0fc76c`. The active-ornament report rendered 659 pages, repeat hashes matched, source paragraph/heading/side-note conservation passed, 858/858 decision records matched, and the active geometry gate had 0 blocking findings; 10 documented note-marker rounding findings remained visible.
