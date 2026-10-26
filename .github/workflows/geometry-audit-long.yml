@@ -159,6 +159,35 @@ jobs:
             diagnosticGate: 'PASS'
           }));
           NODE
+      - name: Assert container-gap diagnostics cover the full document
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          for (const file of ['./artifacts/geometry-audit.json', './artifacts/geometry-audit-ornaments.json']) {
+            const report = JSON.parse(fs.readFileSync(file, 'utf8'));
+            const check = report.audit?.checks?.containerGap;
+            if (!check || check.enabled !== true || check.pageCount !== report.pageCount ||
+                check.pagesEvaluated !== report.pageCount ||
+                !Number.isFinite(check.warningThresholdPx) ||
+                !Number.isFinite(check.mediumThresholdPx) ||
+                check.findingCount !== (report.audit?.issues || []).filter(issue => issue.kind === 'container-gap').length) {
+              console.error('Container-gap diagnostics are missing, incomplete, or inconsistent:', file, check);
+              process.exit(1);
+            }
+            const malformed = (report.audit?.issues || []).filter(issue =>
+              issue.kind === 'container-gap' &&
+              (!Number.isFinite(issue.gapPx) || issue.gapPx <= check.warningThresholdPx ||
+               !['low', 'medium'].includes(issue.severity) ||
+               !['footnote-area-top', 'body-flow-bottom'].includes(issue.to)));
+            if (malformed.length) {
+              console.error('Malformed container-gap finding:', file, malformed.slice(0, 5));
+              process.exit(1);
+            }
+            console.log(JSON.stringify({file, pageCount: check.pageCount, pagesEvaluated: check.pagesEvaluated,
+              warningThresholdPx: check.warningThresholdPx, mediumThresholdPx: check.mediumThresholdPx,
+              findingCount: check.findingCount, gate: 'PASS'}));
+          }
+          NODE
       - name: Upload long-document audit report
         if: always()
         uses: actions/upload-artifact@v4

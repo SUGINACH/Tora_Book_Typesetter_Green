@@ -1482,6 +1482,98 @@ function findPageIdxInTree(node) {
    זו בדיקת אבחון בלבד: היא אינה משנה את העימוד ואינה מסיקה שחוסר איזון הוא תקלה.
    עמוד סוף פרק מוחרג כאשר העמוד הבא נפתח בכותרת 2; בעמוד תחילת פרק
    שטח הכותרת והמרווח שמעל הטקסט אינם נחשבים לשטח טקסט חסר. */
+/* בדיקת פער גדול בין סוף תוכן הגוף למכל הבא/גבול אזור הגוף.
+   שכבת אבחון נפרדת מ-sparse-page; אינה משנה פריסה. */
+const CONTAINER_GAP_WARN_PX = 120;
+const CONTAINER_GAP_MEDIUM_PX = 240;
+
+function auditContainerGaps(page, issues) {
+    const pageEl = _nodeToEl && _nodeToEl.get(page);
+    if (!pageEl) return { checked: false, reason: 'missing-page-element' };
+    const pageEls = Array.from(document.querySelectorAll('#book-container .a4-page'));
+    const pageIndex = pageEls.indexOf(pageEl);
+    const bodyFlow = pageEl.querySelector('.page-body-flow');
+    if (!bodyFlow) return { checked: false, reason: 'missing-body-flow' };
+    const flowRect = bodyFlow.getBoundingClientRect();
+    if (!(flowRect.height > 0)) return { checked: false, reason: 'zero-body-flow' };
+
+    const nextPage = pageIndex >= 0 ? pageEls[pageIndex + 1] : null;
+    const nextFlow = nextPage?.querySelector('.page-body-flow');
+    const nextHeading = nextPage?.querySelector('.title-level-2-standalone');
+    const nextFlowRect = nextFlow?.getBoundingClientRect();
+    const nextHeadingRect = nextHeading?.getBoundingClientRect();
+    const nextPageStartsChapter = !!(
+        nextHeadingRect && nextFlowRect && nextFlowRect.height > 0 &&
+        nextHeadingRect.top < nextFlowRect.top + nextFlowRect.height * 0.45
+    );
+    if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
+    if (pageIndex >= 0 && pageIndex === pageEls.length - 1) {
+        return { checked: true, excluded: 'document-end' };
+    }
+
+    const textSelector = [
+        '.main-column p', '.single-wide-col p',
+        '.main-column .title-level-2-standalone',
+        '.main-column .title-level-3', '.main-column .title-level-4',
+        '.main-column .title-level-5', '.main-column .title-level-6',
+        '.main-column .title-level-7', '.main-column .title-level-custom',
+        '.single-wide-col .title-level-2-standalone',
+        '.single-wide-col .title-level-3', '.single-wide-col .title-level-4',
+        '.single-wide-col .title-level-5', '.single-wide-col .title-level-6',
+        '.single-wide-col .title-level-7', '.single-wide-col .title-level-custom'
+    ].join(',');
+    const textEls = Array.from(new Set(bodyFlow.querySelectorAll(textSelector)));
+    const visibleText = textEls.map(el => ({ el, rect: el.getBoundingClientRect() }))
+        .filter(item =>
+            !item.el.closest('.footnote-area, .margin-notes-column') &&
+            item.rect.width > 0 && item.rect.height > 0 &&
+            item.rect.bottom > flowRect.top &&
+            String(item.el.getAttribute('data-raw-text') || item.el.textContent || '').trim()
+        );
+    if (!visibleText.length) return { checked: true, excluded: 'no-visible-body-text' };
+
+    const last = visibleText.reduce((best, item) =>
+        !best || item.rect.bottom > best.rect.bottom ? item : best, null);
+    const lastTextBottom = last.rect.bottom;
+    const footnoteArea = pageEl.querySelector('.footnote-area');
+    const footnoteRect = footnoteArea?.getBoundingClientRect();
+    const hasVisibleFootnotes = !!(
+        footnoteRect && footnoteRect.width > 0 && footnoteRect.height > 0 &&
+        String(footnoteArea.textContent || '').trim()
+    );
+    const gapToBodyFlowBottomPx = Math.max(0, flowRect.bottom - lastTextBottom);
+    const gapToFootnoteTopPx = hasVisibleFootnotes
+        ? Math.max(0, footnoteRect.top - lastTextBottom)
+        : null;
+    const gapPx = hasVisibleFootnotes ? gapToFootnoteTopPx : gapToBodyFlowBottomPx;
+
+    if (!Number.isFinite(gapPx) || gapPx <= CONTAINER_GAP_WARN_PX) {
+        return { checked: true, gapPx, hasVisibleFootnotes };
+    }
+    const severity = gapPx > CONTAINER_GAP_MEDIUM_PX ? 'medium' : 'low';
+    issues.push({
+        kind: 'container-gap',
+        severity,
+        pageIdx: page.idx,
+        pageLabel: page.label,
+        gapPx: Math.round(gapPx * 100) / 100,
+        warningThresholdPx: CONTAINER_GAP_WARN_PX,
+        mediumThresholdPx: CONTAINER_GAP_MEDIUM_PX,
+        from: 'last-visible-body-text-bottom',
+        to: hasVisibleFootnotes ? 'footnote-area-top' : 'body-flow-bottom',
+        hasVisibleFootnotes,
+        footnoteAreaHeightPx: hasVisibleFootnotes ? Math.round(footnoteRect.height * 100) / 100 : 0,
+        gapToBodyFlowBottomPx: Math.round(gapToBodyFlowBottomPx * 100) / 100,
+        gapToFootnoteTopPx: gapToFootnoteTopPx === null ? null : Math.round(gapToFootnoteTopPx * 100) / 100,
+        bodyFlowHeightPx: Math.round(flowRect.height * 100) / 100,
+        visibleTextElementCount: visibleText.length,
+        lastTextPreview: String(last.el.getAttribute('data-raw-text') || last.el.textContent || '')
+            .replace(/\s+/g, ' ').trim().slice(-180),
+        message: `פער אנכי של ${Math.round(gapPx)}px בין סוף טקסט הגוף ל-${hasVisibleFootnotes ? 'אזור הערות השוליים' : 'תחתית אזור הגוף'} בעמוד ${page.label}`
+    });
+    return { checked: true, gapPx, hasVisibleFootnotes, finding: true };
+}
+
 function auditSparsePage(page, issues) {
     const pageEl = _nodeToEl && _nodeToEl.get(page);
     if (!pageEl) return;
@@ -1782,6 +1874,7 @@ function auditSquareBracketScopes(issues) {
 /* הפעלת כל הבדיקות */
 function auditGeometry(model) {
     const issues = [];
+    let containerGapPagesEvaluated = 0;
     for (const page of model.pages) {
         for (const c of page.children) annotateParents(c, page);
         page._parent = null;
@@ -1796,6 +1889,8 @@ function auditGeometry(model) {
             auditSparseLastLine(c, issues);
         }
         auditSparsePage(page, issues);
+        const containerGapCheck = auditContainerGaps(page, issues);
+        if (containerGapCheck && containerGapCheck.checked) containerGapPagesEvaluated++;
         auditOverflowToFootnote(page, issues);
         auditPageOverflow(page, issues);
     }
@@ -1822,7 +1917,21 @@ function auditGeometry(model) {
             summary.byBalanceOutcome[outcome] = (summary.byBalanceOutcome[outcome] || 0) + 1;
         }
     });
-    return { issues, summary };
+    return {
+        issues,
+        summary,
+        checks: {
+            containerGap: {
+                version: 1,
+                enabled: true,
+                pageCount: model.pages.length,
+                pagesEvaluated: containerGapPagesEvaluated,
+                warningThresholdPx: CONTAINER_GAP_WARN_PX,
+                mediumThresholdPx: CONTAINER_GAP_MEDIUM_PX,
+                findingCount: issues.filter(issue => issue.kind === 'container-gap').length
+            }
+        }
+    };
 }
 
 /* ========================================================================
