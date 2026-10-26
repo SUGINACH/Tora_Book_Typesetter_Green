@@ -3302,3 +3302,18 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - The plan defines nine staged phases with explicit exit gates, current verified baseline, GitHub Actions run/artifact/log workflow, and a no-merge rule for V21.
 - Next action is Stage 0: re-confirm current V23 HEAD and both latest Smoke/long runs before trusting any prior metrics. Then Stage 1 inventories all current findings from the matching artifacts.
 - This commit adds a plan only; it does not itself change the layout algorithm or establish new test results.
+
+
+## 2026-10-26 — אימות הריצות האחרונות והקמת מרשם עבודות ראשי (V23)
+
+- בדקתי את GitHub Actions ואת artifact `12681373537` מריצת המסמך הארוך [40386889244](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40386889244). כל שלבי ה־workflow עברו, כולל בדיקת אבחנת `global-justify-rollback-residual`. בדיקת CLI על HEAD [40386909709](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40386909709) עברה.
+- בדוח ברירת המחדל: 639 עמודים, 27 ממצאים (0 HIGH, 4 MEDIUM, 23 LOW); repeat hash זהה; 3,105 פסקאות, 529 כותרות ו־2,042 הערות צד נשמרו ללא חסר/אי־התאמה; 858/858 רשומות החלטה תואמות ל־DOM; 525/525 גופנים נטענו.
+- בדוח עיטורים פעילים: 659 עמודים, 37 ממצאים (0 HIGH, 6 MEDIUM, 31 LOW); repeat hash זהה; 3,105 פסקאות, 529 כותרות ו־2,042 הערות צד נשמרו ללא חסר/אי־התאמה; 886/886 רשומות החלטה תואמות ל־DOM; 1,923 עטיפות/גרפיקות עיטור נבדקו, ללא גרפיקה חסרה, viewBox לא תקין או clipping. כיסוי קווי הפרדה/הערות/כותרות וגאומטריית עיטורים עבר.
+- שני residuals בעמודים 90 ו־431 מסווגים כעת `global-justify-rollback-residual`, עם אבחנה מובנית על rollback עקב `outerGrowth` ו־`tallestGrowth`. הממצאים נשארו פתוחים; לא שונה אלגוריתם העימוד.
+- זוהו פערי כיסוי להמשך: בדיקת תפוסת עמוד אינה מודדת פערים בין מכלים; בדיקת containment מכסה בעיקר overflow ולא gap גדול מדי; חסר audit שיטתי של החלת כל ההגדרות; repeat-check אינו בדיקת רגרסיה בין commits.
+- סקירת עץ הריפו: 3,753 קבצים; קוד/נכסים פעילים נבדלים מקבוצות מורשת כגון `old_ver/` (89), `debug/` (52), `test/` (10), קובצי קלט היסטוריים ותוצרי HTML/PDF. אין למחוק עדיין: נדרש מיפוי תלות וארכיון. `README.md` מתאר v10/V15 ואינו תואם למצב הנוכחי.
+- לא נמצאו הנתיבים `V23/worklog.md` או `V23/שיחה מספר 2.md`; נמצאו `worklog.md` ו־`שיחה_מספר_2.md` בשורש, לצד כל ששת התמלילים. מסמך `V23/TRANSCRIPT_DELETION_AUDIT.md` אומר במפורש לשמרם עד בדיקת attachments וארכיון עצמאי. בשלב זה אין ראיה לאובדן תוכן; יש אי־התאמה בנתיב/שם.
+- נוצר `V23/MASTER_WORK_REGISTER.md` כדי לאחד מצב בדיקות, הסבר פשוט, פערי ביקורת, ממצאים פתוחים, מיפוי קבצים, מסמכי תכנון, מחקר עריכה וסדר ביצוע. עדיין לא הוכנסו בדיקות חדשות או שינויים במנוע.
+- מקורות מחקר לעריכה טיפוגרפית: Knuth–Plass (1981), PLOS “Ten simple rules…”, Adobe “Orphans and widows…”, Typefi “Common typographic issues”, Chicago Manual of Style. המסקנה: המלצה תוצג רק לאחר אימות ברינדור בפועל או מחשבון שקילות מוכחת.
+- השלב הבא: לעבור על המרשם מול כל המסמכים והפניות, לעדכן README, ואז להתחיל בהרחבת בדיקת דלילות/פערים בלי לשנות את מדיניות העימוד עד שיש fixtures ותוצאות השוואה.
+
