@@ -1,3 +1,13 @@
+## 2026-10-26 — Active-ornament full-document result and gate semantics (V23)
+
+- Inspected completed full-document run [40374149046](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40374149046), artifact [12675905045](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40374149046/artifacts/12675905045), commit `031e90e2bd75d30c3893070a263a68dbf539c81e`. The default-settings audit and terminal-residual sparse-line gate passed; the active-ornament pass rendered 659 pages and passed repeat-render determinism, but exited nonzero because the active geometry gate treated 10 `containment-rounding` findings as blocking.
+- All 10 gate findings are note-marker superscript boxes protruding 1.3125–1.375px above the paragraph box. `geometry-audit.js` already explicitly classifies note-marker protrusions of at most 3px as LOW `containment-rounding` (expected inline/superscript line-box behavior). The findings are retained in the audit issue inventory; the inconsistency was that the CLI gate still treated this documented non-critical class as fatal.
+- Applied a narrowly scoped V23-only gate correction in `tools/geometry-audit-cli.js`: `containment-rounding` remains visible and counted in the report but no longer blocks the active geometry gate; all actual containment, overlap, side-note, footnote, page, and other overflow classes remain blocking. The report now exposes the count and explicit policy for these non-blocking rounding findings. No layout algorithm, CSS, geometry tolerance, severity, or findings were changed.
+- Next verification: smoke suite and full 659-page active-ornament audit. The long run must still show no blocking geometry findings, stable repeat render, intact text/heading/side-note conservation, complete decision-ledger parity, and required ornament/divider/header coverage before this gate correction can be considered validated.
+- Branch separation preserved: V23 only; no V21 changes or merges.
+
+---
+
 ## 2026-10-26 — Active-ornament audit gate and report persistence (V23)
 
 - Reviewed full-document run [40369377579](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40369377579) at workflow commit `30ac3f757ac95b718848a170de37315722ae79de`. Default-settings audit and terminal-residual sparse-line gate passed: 639 pages, 27 findings (0 HIGH, 4 MEDIUM, 23 LOW), deterministic repeat render, content conservation, and 858/858 decision records. The active-ornament pass failed the CLI geometry gate with 10 containment/overlap/overflow findings; the command threw before writing its dedicated report, so the active-ornament measurements could not yet be inspected. Do not call the active-ornament geometry gate passed.
