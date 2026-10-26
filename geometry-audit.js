@@ -971,8 +971,20 @@ function auditColumnBalance(node, issues) {
                 const capacityAfter = metrics.finalJustifyCapacityAfter || finalJustify.capacityAfter || {};
                 const shorterSide = rightHeight <= leftHeight ? 'right' : 'left';
                 const shorterCapacity = capacityAfter[shorterSide];
+                // The global-justify stage stores its diagnostic as JSON on the DOM.
+                // Parse it defensively: reporting must never fail because diagnostics are absent
+                // or malformed, and this classification must not change the layout decision.
+                let globalJustifyDiagnostic = null;
+                const rawGlobalJustifyDiagnostic = metrics.globalJustifyDiagnostic;
+                if (rawGlobalJustifyDiagnostic && typeof rawGlobalJustifyDiagnostic === 'object') {
+                    globalJustifyDiagnostic = rawGlobalJustifyDiagnostic;
+                } else if (typeof rawGlobalJustifyDiagnostic === 'string') {
+                    try { globalJustifyDiagnostic = JSON.parse(rawGlobalJustifyDiagnostic); } catch (_) {}
+                }
+                const globalRollback = globalJustifyDiagnostic?.rollback || {};
                 let balanceOutcome = 'unclassified-residual';
                 let acceptedResidualLimitPx = null;
+                let balanceDiagnosis = null;
                 if (routing === 'light-justify' &&
                     Number.isFinite(residualDiff) &&
                     Math.abs(residualDiff) <= 8) {
@@ -985,6 +997,24 @@ function auditColumnBalance(node, issues) {
                     Number.isFinite(shorterCapacity.totalCapacity) &&
                     shorterCapacity.totalCapacity <= 0.5) {
                     balanceOutcome = 'capacity-limited-residual';
+                } else if (globalRollback.outerGrowth === true && globalRollback.tallestGrowth === true) {
+                    // Keep this distinct from accepted/capacity-limited residuals. The global
+                    // justify attempt was rolled back because it increased the outer/tallest
+                    // geometry; the remaining imbalance is still reported as an issue.
+                    balanceOutcome = 'global-justify-rollback-residual';
+                    balanceDiagnosis = {
+                        source: 'global-justify-diagnostic',
+                        reason: 'rollback-after-outer-and-tallest-growth',
+                        initialDiffPx: Number.isFinite(globalJustifyDiagnostic?.initialDiff)
+                            ? globalJustifyDiagnostic.initialDiff : null,
+                        overshootAfterShrinkPx: Number.isFinite(globalJustifyDiagnostic?.overshootAfterShrink)
+                            ? globalJustifyDiagnostic.overshootAfterShrink : null,
+                        rollback: {
+                            outerGrowth: true,
+                            tallestGrowth: true,
+                            flowOverflowIntroduced: globalRollback.flowOverflowIntroduced === true
+                        }
+                    };
                 }
 
                 const roundRect = rect => ({
@@ -1078,6 +1108,7 @@ function auditColumnBalance(node, issues) {
                     diff: Math.round(diff),
                     balanceOutcome: classifiedOutcome,
                     acceptedResidualLimitPx,
+                    balanceDiagnosis,
                     emptyColumnSide: isCompletelyEmpty ? emptySide : null,
                     missingColumnSide: missingSide,
                     columnGeometrySource: {
