@@ -9,7 +9,7 @@
 - `typesetter.js` — מנוע העימוד, בחירת חלוקת טורים, איזון, כותרות והערות.
 - `style.css` — גאומטריית ה־DOM והעיצוב.
 - `settings-manager.js`, `default_settings.json`, `setting_sets/` — טעינה והחלה של הגדרות.
-- `decorations.js` וקובצי JSON בשורש — מאגרי עיטורים, שערים, קווים מפרידים וכללי הערות.
+- `decorations.js` — **רכיב ליבה פעיל** שמיישם את פונקציות העיטור; אין להתייחס אליו כקובץ מורשת. קובצי JSON בשורש הם מאגרי עיטורים, שערים, קווים מפרידים וכללי הערות.
 - `renderer.html`, `renderer-bridge.js` — סביבת רינדור מבודדת וכלי הגישור אליה.
 - `geometry-audit.js` — מודל הגאומטריה והבדיקות.
 - `tools/geometry-audit-cli.js` — CLI שמפעיל את המנוע ב־Chromium headless ושומר דוחות.

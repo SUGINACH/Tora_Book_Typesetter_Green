@@ -1115,7 +1115,7 @@ async function main() {
                         elements: rows
                     };
                 })(),
-                summary:audit.summary, issues:audit.issues, stats:model.stats, model:clean,
+                summary:audit.summary, issues:audit.issues, checks:audit.checks, stats:model.stats, model:clean,
                 footnoteMeasurementAudit:fnAudit, textConservationAudit,
                 fontsStatus:document.fonts ? document.fonts.status : 'unknown',
                 fontPreflight:window.__fontPreflight || null,
@@ -1517,7 +1517,7 @@ async function main() {
               renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, browser:'Chromium headless' },
             pageCount:data.pageCount,
             geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
-            audit:{summary:data.summary,issues:data.issues},
+            audit:{summary:data.summary,issues:data.issues,checks:data.checks},
             footnoteMeasurementAudit:data.footnoteMeasurementAudit,
             runtime:{pageErrors,consoleErrors}
         };
