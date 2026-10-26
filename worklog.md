@@ -3317,3 +3317,14 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - מקורות מחקר לעריכה טיפוגרפית: Knuth–Plass (1981), PLOS “Ten simple rules…”, Adobe “Orphans and widows…”, Typefi “Common typographic issues”, Chicago Manual of Style. המסקנה: המלצה תוצג רק לאחר אימות ברינדור בפועל או מחשבון שקילות מוכחת.
 - השלב הבא: לעבור על המרשם מול כל המסמכים והפניות, לעדכן README, ואז להתחיל בהרחבת בדיקת דלילות/פערים בלי לשנות את מדיניות העימוד עד שיש fixtures ותוצאות השוואה.
 
+
+
+## 2026-10-26 — השלמת סריקת מסמכי V15–V18 והבהרת מצב הריפו (V23)
+
+- סרקתי את מסמכי הגדרת הבעיות, אימות העימוד, מחקרי Knuth–Plass, תיעוד V15–V18, תיעוד הנגישות והאבטחה, ותיעוד V23 הנוכחי. נוספו ל־`V23/MASTER_WORK_REGISTER.md` סעיף סטטוס לתכניות ההיסטוריות והחלטות נדרשות.
+- פער חשוב: שמות/מנגנוני V18 `knuthPlassBreak`, `applyKpLineBreaks`, `looseness`, `clubpenalties`, `bestByLineCount`, `tightenRunts` ו־`balanceColumnsV2` אינם מופיעים בקובץ `typesetter.js` הנוכחי. אין להסיק מכך לבדו שהם אבדו בטעות; יש להכריע מול תכנון V23 אם הוחלפו, הוסרו במכוון או דורשים שחזור פונקציונלי.
+- פער נוסף: workflows הנוכחיים אינם מציגים שלב מפורש לבדיקת parity של HTML/PDF מיוצא מול ה־DOM החי. יש לבדוק אם מסלול היצוא נתמך ולבנות בדיקת מסמך מלא אם כן.
+- `ACCESSIBILITY.md` מסמן עדיין נושאים פתוחים (סמנטיקה, ARIA ל־contenteditable, labels, contrast, keyboard, screen reader); `SECURITY.md` מכיל roadmap לולידציית קבצים/SVG, state, globals, CSP ובדיקות. אלה ייבדקו מול המצב בפועל, בנפרד מבדיקות הגאומטריה.
+- מסמך V18 מונה סקריפטי בדיקה שאינם קיימים כיום תחת `scripts/`; לא נמצאה היסטוריית commit עבור `scripts/validate_report_accuracy.js` בריפו החדש. הם מסווגים כקובצי מורשת הדורשים הכרעה, לא כקבצים שאבדו בוודאות.
+- עדכנתי את `README.md` כך שיתאר את מבנה V23, הרצת הבדיקות, הקלט הקנוני והמשמעות/המגבלות של repeat check. לא בוצעו שינויי מנוע או הוספת בדיקות בשלב תכנון זה.
+- ה־worklog עודכן באותו commit עם מסמך המרשם ו־README.
