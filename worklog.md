@@ -1,3 +1,12 @@
+## 2026-10-26 — Research report and reproducible long-audit fingerprint (V23)
+
+- Added `V23/RESEARCH_DETERMINISTIC_TYPESSETTING_ENGINE.md`, a Hebrew engineering research synthesis covering Knuth–Plass, CSS fragmentation/paged media, text shaping, configuration governance, visual regression, architecture, decision-ledger requirements, test matrix, and release gates. Commit: `a63e9aa8eb77464b73d7da92c8d5eb5201b13e33`.
+- Updated `.github/workflows/geometry-audit-long.yml` to emit `artifacts/run-fingerprint.json` containing repository, ref, SHA, run ID/attempt, runner OS, Node version, and workflow path, and upload it with the audit report. Commits: `a4a0c6d699ddbb67806a0b1b31a23eb4c7a16231`, then `5519b85f42e3d56a2c7fabd7f89c593a28199e99` to ensure valid JSON output.
+- At the time of this entry, long audit run [40355467612](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40355467612) and smoke run [40355467837](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40355467837) were queued on SHA `5519b85f42e3d56a2c7fabd7f89c593a28199e99`; results must be checked before recording a pass/fail. Previous successful smoke run [40322224060](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40322224060) applies to older SHA `80bb72247657ace954c6011fb3f9818a1cf094c8`, not current HEAD.
+- Scope remains V23 only. No engine algorithm change is claimed, and no changes or merge were made to V21.
+
+---
+
 ## 2026-10-26 — Documentation consolidation
 
 Created `V23/CONSOLIDATED_ENGINEERING_HISTORY.md` from the six conversation exports and supplemented it with documented findings from the worklog, dependency map, stability plan, and technical history. Added sections 9–10 to `V23/TECHNICAL_HISTORY_AND_ARCHITECTURE.md` covering source provenance, code responsibility, geometry/test coverage, decision-ledger invariants, CI gates, and open findings. Updated `V23/TRANSCRIPT_DELETION_AUDIT.md`. Documentation only; no engine code changes and no V21 changes. Keep original transcripts until attachment review and an independent archive are complete.
