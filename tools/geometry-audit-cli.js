@@ -1292,6 +1292,7 @@ async function main() {
             };
         }, { includeFullModel: args.fullModel, testEmptyColumnBalance: args.testEmptyColumnBalance, testMissingColumnElement: args.testMissingColumnElement });
 
+        let activeGeometryGateFailures = [];
         if (args.requireOrnaments || args.requireGeometryFeatures) {
             const ornamentCoverage = data.ornamentDomCoverage || {};
             const requiredOrnaments = ['h2Top', 'h2Bottom', 'h3Right', 'h3Left', 'noteHeaderRight', 'noteHeaderLeft'];
@@ -1396,8 +1397,10 @@ async function main() {
                     (issue.kind || 'unknown') + (issue.location ? ' @ ' + issue.location : '') +
                     (issue.message ? ': ' + String(issue.message).replace(/[\\r\\n]+/g, ' ').slice(0, 180) : '')
                 );
-                throw new Error('Active geometry gate failed: ' + geometryFindings.length +
-                    ' containment/overlap/overflow finding(s): ' + sample.join(' | '));
+                activeGeometryGateFailures = geometryFindings;
+                process.stderr.write('Active geometry gate failed: ' + geometryFindings.length +
+                    ' containment/overlap/overflow finding(s): ' + sample.join(' | ') +
+                    '\\nDiagnostic report will still be written before the process exits nonzero.\\n');
             }
         }
         const ledger = Array.isArray(data.layoutDecisionRecords) ? data.layoutDecisionRecords : [];
@@ -1490,7 +1493,7 @@ async function main() {
             run:{ input:path.relative(root,inputPath).split(path.sep).join('/'), inputBytes:Buffer.byteLength(inputText,'utf8'),
               generatedAt:new Date().toISOString(), branch:process.env.GITHUB_REF_NAME || null,
               gitCommit:process.env.GITHUB_SHA || null, viewport:{width:args.viewportWidth,height:args.viewportHeight,deviceScaleFactor:1},
-              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, browser:'Chromium headless' },
+              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, browser:'Chromium headless' },
             pageCount:data.pageCount,
             geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
             audit:{summary:data.summary,issues:data.issues},
@@ -1570,6 +1573,7 @@ async function main() {
         else if (nondeterministic) { process.stderr.write('Determinism check failed at page ' + report.run.determinismCheck.firstDifferingPage + '\n'); process.exitCode = 3; }
         else if (fail) process.exitCode = 1;
         else if (integrityFailures.length) process.exitCode = 4;
+        else if (activeGeometryGateFailures.length) process.exitCode = 6;
         if (noteMarkerLineDiagnosticsMissing && !process.exitCode) process.exitCode = 5;
     } finally {
         if (browser) await browser.close().catch(() => {});
