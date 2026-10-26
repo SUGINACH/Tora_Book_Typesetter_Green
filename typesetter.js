@@ -3840,7 +3840,40 @@ window.addEventListener('beforeprint', () => { if (settingsDirty) typesetDocumen
                 const s=getComputedStyle(el);node.typography={fontFamily:s.fontFamily,fontSize:s.fontSize,fontWeight:s.fontWeight,
                     lineHeight:s.lineHeight,textAlign:s.textAlign,textAlignLast:s.textAlignLast,whiteSpace:s.whiteSpace,
                     marginTop:s.marginTop,marginBottom:s.marginBottom,paddingTop:s.paddingTop,paddingBottom:s.paddingBottom,display:s.display};}
-            nodes.push(node);}
+            if(el.matches('.block-2col')) {
+                const parseAttr = name => {
+                    const raw = el.getAttribute(name);
+                    if (!raw) return null;
+                    try { return JSON.parse(raw); } catch (_) { return { parseError:true }; }
+                };
+                const table = parseAttr('data-layout-balance-candidate-table');
+                const score = parseAttr('data-layout-balance-selection-score');
+                node.layoutDecision = {
+                    phase: el.getAttribute('data-layout-final-phase') || null,
+                    balanceStatus: el.getAttribute('data-layout-balance-status') || null,
+                    skipReason: el.getAttribute('data-layout-balance-skip-reason') || null,
+                    routing: el.getAttribute('data-layout-balance-routing') || null,
+                    policy: el.getAttribute('data-layout-balance-selection-policy') || null,
+                    fallback: el.getAttribute('data-layout-balance-fallback') || null,
+                    selectedCandidateIndex: el.getAttribute('data-layout-balance-selected-candidate') || null,
+                    splitItemIndex: el.getAttribute('data-layout-balance-split-item-index') || null,
+                    splitLineCount: el.getAttribute('data-layout-balance-split-line-count') || null,
+                    candidateCount: el.getAttribute('data-layout-balance-candidates') || null,
+                    candidateTableCount: Array.isArray(table) ? table.length : null,
+                    candidateTableSample: Array.isArray(table) ? table.slice(0, 24) : table,
+                    selectionScore: score,
+                    rightHeight: el.getAttribute('data-layout-balance-right') || null,
+                    leftHeight: el.getAttribute('data-layout-balance-left') || null,
+                    diff: el.getAttribute('data-layout-balance-diff') || null,
+                    overflow: el.getAttribute('data-layout-balance-over') || null,
+                    finalFits: el.getAttribute('data-layout-final-fits') || null,
+                    finalJustifyRollbackReason: el.getAttribute('data-layout-final-justify-rollback-reason') || null,
+                    globalJustifyRolledBack: el.getAttribute('data-layout-global-justify-rolled-back') || null,
+                    globalJustifyRollbackReason: el.getAttribute('data-layout-global-justify-rollback-reason') || null,
+                    canonicalDecisionRecord: parseAttr('data-layout-decision-record')
+                };
+            }
+            nodes.push(node);
         const f=page.querySelector('.page-body-flow')?.getBoundingClientRect(),n=page.querySelector('.footnote-area')?.getBoundingClientRect();
         return{nodes:new Map(nodes.map(x=>[x.key,x])),metrics:{page:{w:round(pr.width),h:round(pr.height)},
             bodyFlow:f?{y:round(f.top-pr.top),h:round(f.height),bottom:round(f.bottom-pr.top)}:null,
@@ -3875,8 +3908,8 @@ window.addEventListener('beforeprint', () => { if (settingsDirty) typesetDocumen
     function wrap(name,fn,force=false,targetFn=null){if(typeof fn!=='function'||fn.__stepByStepAuditWrapped)return fn;
         const wrapped=function(...args){const before=pagesFor(name,args,null),target=targetFn?targetFn(args):args[0]?.nodeType===1?args[0]:null;
             before.forEach(p=>record(p,name,'before',target,force));let result;
-            try{result=fn.apply(this,args);}catch(error){pagesFor(name,args,null).forEach(p=>record(p,name,'throw',target,true));throw error;}
-            pagesFor(name,args,result).forEach(p=>record(p,name,'after',targetFn?targetFn(args,result):target,force||name==='createPageLayout'));return result;};
+            try{result=fn.apply(this,args);}catch(error){new Set([...before,...pagesFor(name,args,null)]).forEach(p=>record(p,name,'throw',target,true));throw error;}
+            new Set([...before,...pagesFor(name,args,result)]).forEach(p=>record(p,name,'after',targetFn?targetFn(args,result):target,force||name==='createPageLayout'));return result;};
         Object.defineProperty(wrapped,'__stepByStepAuditWrapped',{value:true});return wrapped;}
     if(!config.enabled)return;
     createPageLayout=wrap('createPageLayout',createPageLayout);
