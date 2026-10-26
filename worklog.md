@@ -1,3 +1,14 @@
+## 2026-10-26 — Explicit diagnosis for global-justify rollback residuals (V23)
+
+- Verified the repaired CLI/long-document runs [40383419617](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40383419617) and [40383418797](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40383418797): both passed on commit `116a23329946c838383b6186c73f03312f0fc76c`. The active-ornament report rendered 659 pages, repeat hashes matched, source paragraph/heading/side-note conservation passed, 858/858 decision records matched, and the active geometry gate had 0 blocking findings; 10 documented note-marker rounding findings remained visible.
+- Investigated the two active-ornament `unclassified-residual` imbalance findings (pageIdx 90 and 431; each 7px). Their `globalJustifyDiagnostic` records explicitly report rollback because both outer geometry and tallest-column geometry grew. The classification was incomplete: the diagnostic existed, but the audit did not use it to name this residual cause.
+- Updated `geometry-audit.js` to label only this evidence-backed signature `global-justify-rollback-residual` and emit a structured `balanceDiagnosis` with source, reason, initial difference, overshoot-after-shrink, and rollback flags. The imbalance finding remains in the issue inventory; it is not reclassified as accepted, suppressed, or resolved. This is diagnostic-only: no pagination, column split, justification, CSS, tolerance, or severity changed.
+- Added a long-workflow assertion requiring every issue with this explicit rollback signature to carry the matching outcome and diagnosis. This prevents future reports from silently reverting to `unclassified-residual` for the same known cause.
+- Next verification: CLI smoke plus both default and active-ornament full-document audits. Only after they pass should we continue to sparse-page triage; no layout-policy changes are justified yet.
+- Branch separation preserved: V23 only; no V21 changes or merges.
+
+---
+
 ## 2026-10-26 — Active geometry gate regression hardening (V23)
 
 - Reviewed full-document run [40379233609](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40379233609) and artifact [12677991950](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40379233609/artifacts/12677991950). Both default and active-ornament long audits passed; the active configuration measured 659 pages, repeat-render hashes matched, source paragraphs/headings/side notes were conserved, all 886 decision records were valid and matched the DOM, all required ornament/divider/header coverage gates passed, and the active geometry gate had 0 blocking findings. Its 10 remaining `containment-rounding` findings were finite note-marker protrusions of 1.3125–1.375px and remain visible as LOW findings.
