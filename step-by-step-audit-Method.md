@@ -85,3 +85,25 @@ The renderer also exposes `window.__stepByStepAudit.configure(options)`. The CLI
 ## Investigation record template
 
 For every issue save: kind/severity; page index and printed label; token ID and preview; first appearance and candidate window; trace completeness; last known-good/first bad stage; attempted correction and rollback evidence; all sibling additions/removals/changes in the window; hypothesis and counterfactual result; remaining uncertainty.
+
+
+## Lessons integrated from the parallel audit proposal (2026-10-27)
+
+The two parallel files were reviewed as a design proposal, not copied as executable code. Their checkpoint runner depends on `window.__auditCheckpoints`, `window.__runAuditCheckpoint`, and a standalone `scripts/step-by-step-audit.js`; the current V23 recorder instead exports `window.__stepByStepAudit` and the CLI writes `geometry.stepByStepAudit`. The parallel runner is therefore not a drop-in fit for V23.
+
+### Valuable additions to the V23 investigation protocol
+
+1. **Chapter isolation as a second pass.** After the full-document audit identifies affected page(s), map the finding to the nearest preceding Heading 2 and rerun that chapter alone with the same renderer settings. Match the issue by semantic signature (kind, token/text identity, structural role and local geometry), not by global page number. Preserve the original full-document finding and both page-number mappings. Treat chapter isolation as a diagnostic counterfactual, not a replacement for the full-text regression: page numbering, heading metadata, note counters, preceding document state or chapter-final handling can still differ.
+2. **Named macro-checkpoints.** The proposal's four useful milestones are initial pagination, cross-paragraph parenthesis pass, post-rebalance, and page-height/final adjustment. V23's per-function snapshots are finer-grained, but the report should also expose these macro boundaries where present. If a defect first exists before a macro-checkpoint, add an internal checkpoint in the relevant mutator rather than inferring which sub-operation caused it.
+3. **Issue lifecycle comparison.** Compare issue signatures at each checkpoint and label each as first observed, persists, resolved, reintroduced, or not comparable. The signature must include semantic identity and local structural context; `kind + pageIdx` alone can merge unrelated defects. If the page did not exist in the prior checkpoint, classify as `not-observable-yet`, not automatically as harmless or naturally created.
+4. **Full page context.** Retain the issue element's decision attributes and the changes to sibling elements between first appearance and the first bad state. V23 already records page deltas; the investigation report should present added, removed, moved/resized/restyled elements in that candidate window, including unrelated notes, headings, ornaments, dividers and blocks that may have consumed capacity.
+5. **Correction/rollback evidence.** For a proposed cause, include before/after geometry, relevant decision-ledger fields (candidate/skip/capacity/fallback/rollback), and whether the issue predicate actually changed. A page-count comparison or a new issue at a later checkpoint is evidence for a candidate, not proof of causality.
+6. **Per-page/per-block escalation.** When the issue already exists after initial pagination, narrow the trace to the affected chapter, then instrument the page loop or the specific block operation (e.g. split selection, vertical justification, orphan reclaim, footnote flush, divider fitting). Avoid running expensive geometry flushes after every operation in the normal full-document CI path; enable deeper checkpoints only for affected chapters/pages.
+
+### Required safeguards
+
+- Never call an issue "created by stage X" unless the issue predicate is evaluated false immediately before and true immediately after X on a comparable page/element.
+- If the predicate cannot be evaluated at intermediate stages, report `candidate-stage` and confidence/limitations, not a definitive cause.
+- If an element cannot be matched across stages, or a page is recreated/reindexed, mark the comparison `not-comparable` and use token identity plus local content/structure to remap it.
+- A chapter-isolated run must record source line range, Heading 2 title, extracted text hash, settings hash, global page index/label, isolated local page index/label, and renderer/build commit.
+- Run `very_long_test_text.txt` for final regression after any instrumentation or renderer change; chapter-only runs are supplements.

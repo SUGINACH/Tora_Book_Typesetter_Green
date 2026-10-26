@@ -276,3 +276,12 @@
 - [גבוה] להצמיד לכל ממצא הפניה לטוקן, להחלטת המנוע ולחלון האירועים מאז הופעת הטקסט; לבחון גם תיקונים לאלמנטים אחרים שהשפיעו על העמוד.
 - [חוסם לסיבתיות אוטומטית] אין להכריז על שורש סיבתי בלי checkpoint לפני/אחרי והערכת predicate ביניים. אם גבול השינוי חסר או העקבות נחתכו, להוסיף checkpoint או להגדיל מגבלות.
 - מסמך השיטה: `step-by-step-audit-Method.md`. בדיקת המסמך המלא תמיד משתמשת ב-`very_long_test_text.txt`.
+
+
+### שלב 3B — שילוב הצעת parallel step-by-step audit
+- [גבוה] להוסיף למחקר האבחוני בידוד פרק לפי Heading 2 אחרי איתור ממצאים בריצה המלאה, תוך התאמה לפי token/text identity ולא מספר עמוד בלבד.
+- [גבוה] להציג מחזור חיים של כל issue signature: first-observed / persists / resolved / reintroduced / not-observable-yet / not-comparable.
+- [גבוה] להוסיף macro-checkpoints סביב שלבי העימוד הראשיים, לצד ה-trace ברמת פונקציה הקיים.
+- [גבוה] לאמת סיבתיות רק באמצעות predicate לפני/אחרי; pageCount או הופעה מאוחרת לבדם אינם הוכחה.
+- [בינוני] לבנות runner לבידוד פרקים ששומר טווח שורות מקור, hash טקסט, hash הגדרות, commit, ומיפוי עמוד גלובלי↔מקומי.
+- מקור עיון: `parallel-step-by-step-audit-method-21.md` ו-`parallel-step-by-step-audit-21.js`; הסקריפט עצמו אינו תואם ישירות לממשקי V23.
