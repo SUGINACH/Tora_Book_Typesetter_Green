@@ -13,7 +13,7 @@ const crypto = require('node:crypto');
 function parseArgs(argv) {
     const o = { input: null, settings: null, report: './artifacts/geometry-audit.json',
         summary: './artifacts/geometry-audit-summary.md', fullModel: false, failOn: 'high',
-        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, help: false };
+        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, stepAuditMaxEvents:4000, stepAuditMaxElements:1200, stepAuditTextChars:180, stepAuditNoLineRects:false, stepAuditNoComputedStyle:false, stepAuditDisabled:false, help: false };
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         const take = () => { if (i + 1 >= argv.length) throw new Error('Missing value for ' + arg); return argv[++i]; };
@@ -28,6 +28,12 @@ function parseArgs(argv) {
             case '--require-geometry-features': o.requireGeometryFeatures = true; break;
             case '--require-note-marker-line-diagnostics': o.requireNoteMarkerLineDiagnostics = true; break;
             case '--test-empty-column-balance': o.testEmptyColumnBalance = true; break;
+            case '--step-audit-max-events': o.stepAuditMaxEvents = Number(take()); break;
+            case '--step-audit-max-elements': o.stepAuditMaxElements = Number(take()); break;
+            case '--step-audit-text-chars': o.stepAuditTextChars = Number(take()); break;
+            case '--step-audit-no-line-rects': o.stepAuditNoLineRects = true; break;
+            case '--step-audit-no-computed-style': o.stepAuditNoComputedStyle = true; break;
+            case '--step-audit-disabled': o.stepAuditDisabled = true; break;
             case '--test-missing-column-element': o.testMissingColumnElement = true; break;
             case '--fail-on': o.failOn = take(); break;
             case '--timeout-ms': o.timeoutMs = Number(take()); break;
@@ -44,7 +50,8 @@ function help() {
     process.stdout.write('Geometry audit CLI\nRequired: --input <text-file>\n' +
       'Options: --settings <json-file>, --report <json-file>, --summary <md-file>, --full-model, --repeat-check,\n' +
       '--fail-on <high|medium|low|none>, --timeout-ms <number>, --viewport-width <number>, --viewport-height <number>, --require-ornaments, --require-geometry-features, --require-note-marker-line-diagnostics,\n' +
-      '--test-empty-column-balance, --test-missing-column-element (regression tests only)\n');
+      '--test-empty-column-balance, --test-missing-column-element (regression tests only),\n' +
+      '--step-audit-max-events <n>, --step-audit-max-elements <n>, --step-audit-text-chars <n>, --step-audit-no-line-rects, --step-audit-no-computed-style, --step-audit-disabled\n');
 }
 function abs(p) { return path.resolve(process.cwd(), p); }
 function ensureParent(p) { fs.mkdirSync(path.dirname(p), { recursive: true }); }
@@ -538,21 +545,25 @@ function markdown(r) {
     return lines.join('\n');
 }
 
-async function triggerTypeset(page, text, settings, timeoutMs) {
-    return page.evaluate(({ text, settings, timeoutMs }) => new Promise((resolve, reject) => {
-        let settled = false;
-        const cleanup = () => { window.removeEventListener('message', onMessage); clearTimeout(timer); };
-        const finish = (fn, val) => { if (settled) return; settled = true; cleanup(); fn(val); };
-        const onMessage = event => {
-            const msg = event.data;
-            if (!msg || typeof msg !== 'object') return;
-            if (msg.type === 'render-error') finish(reject, new Error(msg.error || 'Renderer error'));
-            if (msg.type === 'render-done') finish(resolve, { pageCountAtDone: msg.pageCount });
-        };
-        const timer = setTimeout(() => finish(reject, new Error('Renderer timeout after ' + timeoutMs + ' ms')), timeoutMs);
-        window.addEventListener('message', onMessage);
-        window.postMessage({ type: 'typeset', text, settings }, '*');
-    }), { text, settings, timeoutMs });
+async function triggerTypeset(page, text, settings, timeoutMs, stepAuditConfig = {}) {
+    return page.evaluate(({ text, settings, timeoutMs, stepAuditConfig }) => {
+        window.__stepByStepAudit?.configure?.(stepAuditConfig);
+        window.__stepByStepAudit?.reset?.();
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            const cleanup = () => { window.removeEventListener('message', onMessage); clearTimeout(timer); };
+            const finish = (fn, val) => { if (settled) return; settled = true; cleanup(); fn(val); };
+            const onMessage = event => {
+                const msg = event.data;
+                if (!msg || typeof msg !== 'object') return;
+                if (msg.type === 'render-error') finish(reject, new Error(msg.error || 'Renderer error'));
+                if (msg.type === 'render-done') finish(resolve, { pageCountAtDone: msg.pageCount });
+            };
+            const timer = setTimeout(() => finish(reject, new Error('Renderer timeout after ' + timeoutMs + ' ms')), timeoutMs);
+            window.addEventListener('message', onMessage);
+            window.postMessage({ type: 'typeset', text, settings }, '*');
+        });
+    }, { text, settings, timeoutMs, stepAuditConfig });
 }
 
 async function captureLayoutSignature(page) {
@@ -777,12 +788,12 @@ async function main() {
             if (document.fonts && document.fonts.ready) await document.fonts.ready;
         });
 
-        const renderResult = await triggerTypeset(page, inputText, settings, args.timeoutMs);
+        const renderResult = await triggerTypeset(page, inputText, settings, args.timeoutMs, { enabled: !args.stepAuditDisabled, maxEventsPerPage: args.stepAuditMaxEvents, maxElementsPerSnapshot: args.stepAuditMaxElements, maxTextChars: args.stepAuditTextChars, captureLineRects: !args.stepAuditNoLineRects, captureComputedStyle: !args.stepAuditNoComputedStyle });
         let determinismCheck = null;
         if (args.repeatCheck) {
             const firstSignature = await captureLayoutSignature(page);
             const firstPageHashes = firstSignature.map(sha256);
-            const secondRenderResult = await triggerTypeset(page, inputText, settings, args.timeoutMs);
+            const secondRenderResult = await triggerTypeset(page, inputText, settings, args.timeoutMs, { enabled: !args.stepAuditDisabled, maxEventsPerPage: args.stepAuditMaxEvents, maxElementsPerSnapshot: args.stepAuditMaxElements, maxTextChars: args.stepAuditTextChars, captureLineRects: !args.stepAuditNoLineRects, captureComputedStyle: !args.stepAuditNoComputedStyle });
             const secondSignature = await captureLayoutSignature(page);
             const secondPageHashes = secondSignature.map(sha256);
             const common = Math.min(firstPageHashes.length, secondPageHashes.length);
@@ -1294,12 +1305,47 @@ async function main() {
                 parenthesisScopeDiagnosticError: document.querySelector('#book-container')?.getAttribute('data-layout-paren-scope-diagnostic-error') || null,
                 parenFontCounterfactualSummary: (() => { try { return JSON.parse(document.querySelector('#book-container')?.getAttribute('data-layout-paren-font-counterfactual-summary') || 'null'); } catch (_) { return null; } })(),
                 parenFontCounterfactualError: document.querySelector('#book-container')?.getAttribute('data-layout-paren-font-counterfactual-error') || null,
+                stageByStepAudit: (() => {
+                    const traces = window.__stepByStepAudit?.export?.() || [];
+                    const issues = audit.issues || [];
+                    const hasToken = (node, tokenId) => !!tokenId && (node?.tokenId === tokenId ||
+                        node?.attributes?.['data-token-id'] === tokenId || node?.before?.tokenId === tokenId || node?.after?.tokenId === tokenId);
+                    const issueLinks = issues.map((issue, issueIndex) => {
+                        const trace = traces.find(item => item.pageIndex === issue.pageIdx) || null;
+                        if (!trace) return { issueIndex, kind: issue.kind, severity: issue.severity, pageIdx: issue.pageIdx,
+                            tokenId: issue.tokenId || null, traceAvailable: false, reason: 'no-trace-for-page' };
+                        const tokenId = issue.tokenId == null ? null : String(issue.tokenId), matching = [];
+                        for (const event of trace.events) {
+                            const targetMatch = tokenId && event.target?.tokenId === tokenId;
+                            const deltaMatch = tokenId && ['added','removed'].some(k => (event.delta?.[k]||[]).some(n=>hasToken(n,tokenId))) ||
+                                tokenId && (event.delta?.changed||[]).some(n=>hasToken(n,tokenId));
+                            if(targetMatch||deltaMatch)matching.push(event.index);
+                        }
+                        let firstAppearanceEventIndex=null;
+                        if(tokenId)for(const event of trace.events)if((event.delta?.added||[]).some(n=>hasToken(n,tokenId))){firstAppearanceEventIndex=event.index;break;}
+                        const preview=String(issue.pText||issue.nodeText||issue.text||'').replace(/\\s+/g,' ').slice(0,48);
+                        if(firstAppearanceEventIndex==null&&preview){const found=trace.events.find(e=>(e.delta?.added||[]).some(n=>n.text?.includes(preview)));if(found)firstAppearanceEventIndex=found.index;}
+                        return {issueIndex,kind:issue.kind,severity:issue.severity,pageIdx:issue.pageIdx,tokenId,textPreview:preview||null,
+                            traceAvailable:true,firstAppearanceEventIndex,lastEventIndex:trace.events.length?trace.events[trace.events.length-1].index:null,
+                            targetTouchEventIndexes:matching,candidateWindowStart:firstAppearanceEventIndex,
+                            candidateWindowEnd:trace.events.length?trace.events[trace.events.length-1].index:null,
+                            traceComplete:trace.droppedEvents===0,droppedEvents:trace.droppedEvents,
+                            causality:'candidate-window-only; a trigger stage is not declared automatically'};
+                    });
+                    return {version:1,config:window.__stepByStepAudit?.config||null,
+                        summary:{pagesWithTrace:traces.length,pagesWithDroppedEvents:traces.filter(p=>p.droppedEvents>0).length,
+                            totalEvents:traces.reduce((n,p)=>n+p.eventCount,0),totalDroppedEvents:traces.reduce((n,p)=>n+p.droppedEvents,0),
+                            issuesWithTrace:issueLinks.filter(x=>x.traceAvailable).length,issuesWithoutTrace:issueLinks.filter(x=>!x.traceAvailable).length},
+                        pages:traces,issueLinks};
+                })(),
                 bodyScrollHeight:document.body.scrollHeight,
                 bookContainerScrollHeight:document.getElementById('book-container')?.scrollHeight ?? null
             };
         }, { includeFullModel: args.fullModel, testEmptyColumnBalance: args.testEmptyColumnBalance, testMissingColumnElement: args.testMissingColumnElement });
 
         const allIssues = Array.isArray(data.issues) ? data.issues : [];
+        const traceLinksByIssueIndex = new Map((data.stageByStepAudit?.issueLinks || []).map(link => [link.issueIndex, link]));
+        allIssues.forEach((issue, index) => { issue.stepByStepTrace = traceLinksByIssueIndex.get(index) || { traceAvailable:false, reason:'issue-trace-link-missing' }; });
         // Keep gate-policy diagnostics available in every report, even when the active
         // geometry gate is disabled for a baseline or smoke run.
         const isDocumentedNoteMarkerRounding = issue =>
@@ -1516,7 +1562,7 @@ async function main() {
               gitCommit:process.env.GITHUB_SHA || null, viewport:{width:args.viewportWidth,height:args.viewportHeight,deviceScaleFactor:1},
               renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, browser:'Chromium headless' },
             pageCount:data.pageCount,
-            geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
+            geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,stepByStepAudit:data.stageByStepAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
             audit:{summary:data.summary,issues:data.issues,checks:data.checks},
             footnoteMeasurementAudit:data.footnoteMeasurementAudit,
             runtime:{pageErrors,consoleErrors}
