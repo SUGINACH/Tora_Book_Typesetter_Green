@@ -1299,6 +1299,16 @@ async function main() {
             };
         }, { includeFullModel: args.fullModel, testEmptyColumnBalance: args.testEmptyColumnBalance, testMissingColumnElement: args.testMissingColumnElement });
 
+        const allIssues = Array.isArray(data.issues) ? data.issues : [];
+        // Keep gate-policy diagnostics available in every report, even when the active
+        // geometry gate is disabled for a baseline or smoke run.
+        const isDocumentedNoteMarkerRounding = issue =>
+            issue.kind === 'containment-rounding' &&
+            issue.childType === 'note-marker' &&
+            Number.isFinite(issue.overflowPx) &&
+            issue.overflowPx >= 0 &&
+            issue.overflowPx <= 3;
+        const nonBlockingRoundingFindings = allIssues.filter(isDocumentedNoteMarkerRounding);
         let activeGeometryGateFailures = [];
         if (args.requireOrnaments || args.requireGeometryFeatures) {
             const ornamentCoverage = data.ornamentDomCoverage || {};
@@ -1400,17 +1410,6 @@ async function main() {
                 'fn-page-overflow', 'fn-pn-overflow', 'fn-containment',
                 'fn-line-overflow', 'page-overflow'
             ]);
-            const allIssues = Array.isArray(data.issues) ? data.issues : [];
-            // A rounding finding is non-blocking only when the audit identifies the
-            // child as a note marker and measures a small, finite protrusion <= 3px.
-            // Any malformed/unexpected "containment-rounding" record remains blocking.
-            const isDocumentedNoteMarkerRounding = issue =>
-                issue.kind === 'containment-rounding' &&
-                issue.childType === 'note-marker' &&
-                Number.isFinite(issue.overflowPx) &&
-                issue.overflowPx >= 0 &&
-                issue.overflowPx <= 3;
-            const nonBlockingRoundingFindings = allIssues.filter(isDocumentedNoteMarkerRounding);
             const geometryFindings = allIssues.filter(issue =>
                 geometryKinds.has(issue.kind) ||
                 (issue.kind === 'containment-rounding' && !isDocumentedNoteMarkerRounding(issue)));
