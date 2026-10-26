@@ -1,3 +1,13 @@
+## 2026-10-26 — Active geometry gate regression hardening (V23)
+
+- Reviewed full-document run [40379233609](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40379233609) and artifact [12677991950](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40379233609/artifacts/12677991950). Both default and active-ornament long audits passed; the active configuration measured 659 pages, repeat-render hashes matched, source paragraphs/headings/side notes were conserved, all 886 decision records were valid and matched the DOM, all required ornament/divider/header coverage gates passed, and the active geometry gate had 0 blocking findings. Its 10 remaining `containment-rounding` findings were finite note-marker protrusions of 1.3125–1.375px and remain visible as LOW findings.
+- Smoke run [40379240689](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40379240689) passed. A parallel CLI run [40379233582](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40379233582) was cancelled by concurrency after a newer commit-triggered run began; this is not a test failure.
+- Next hardening step: narrow the non-blocking exception to the exact documented shape (child is `note-marker`, finite overflow between 0 and 3px); any malformed/unexpected `containment-rounding` record remains blocking. Add explicit Markdown gate reporting and a smoke assertion that gate state, policy, and counts agree. No pagination, layout geometry, CSS, tolerance, or finding severity is changed.
+- Active-ornament run still reports 9 sparse pages and 7 balance findings (including 2 unclassified residuals); these remain visible and are not treated as resolved by the geometry-gate pass. Follow-up analysis should prioritize the unclassified residuals and the very sparse pages with structural context before changing layout policy.
+- Branch separation preserved: V23 only; no V21 changes or merges.
+
+---
+
 ## 2026-10-26 — Active-ornament full-document result and gate semantics (V23)
 
 - Inspected completed full-document run [40374149046](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40374149046), artifact [12675905045](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40374149046/artifacts/12675905045), commit `031e90e2bd75d30c3893070a263a68dbf539c81e`. The default-settings audit and terminal-residual sparse-line gate passed; the active-ornament pass rendered 659 pages and passed repeat-render determinism, but exited nonzero because the active geometry gate treated 10 `containment-rounding` findings as blocking.
