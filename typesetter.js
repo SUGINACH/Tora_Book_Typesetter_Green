@@ -3874,6 +3874,7 @@ window.addEventListener('beforeprint', () => { if (settingsDirty) typesetDocumen
                 };
             }
             nodes.push(node);
+        }
         const f=page.querySelector('.page-body-flow')?.getBoundingClientRect(),n=page.querySelector('.footnote-area')?.getBoundingClientRect();
         return{nodes:new Map(nodes.map(x=>[x.key,x])),metrics:{page:{w:round(pr.width),h:round(pr.height)},
             bodyFlow:f?{y:round(f.top-pr.top),h:round(f.height),bottom:round(f.bottom-pr.top)}:null,

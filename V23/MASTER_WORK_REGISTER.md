@@ -299,3 +299,13 @@
 **Change in this commit:** failure-only browser readiness diagnostics report document state, required global types, script URLs, renderer flag, page errors, and console/request errors. No layout algorithm, settings, CSS, timeout policy, or trace behavior was changed. This is observability, not a verified fix.
 
 **Verification to run now:** (1) CLI smoke workflow; (2) full long-document workflow using `very_long_test_text.txt`, default settings and active ornament settings. Start runs and provide URLs without polling. If the smoke predicate still times out, use its diagnostic payload to identify the absent global/script error and correct that cause before claiming CLI success. After success, inspect trace completeness, repeat determinism, and rendered-layout parity. Branch V23 only; do not merge into V21.
+
+
+## 5. עדכון 27.10.2026 — תיקון שגיאת תחביר שחסמה את המרנדר
+
+- ריצות [CLI 40422082291](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40422082291) ו-[מסמך מלא 40422082250](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40422082250) נכשלו לפני תחילת העימוד. שתיהן דיווחו `SyntaxError: Unexpected token ')'`; `window.typesetDocument` לא הוגדר, בעוד `window.__geomAudit.audit` היה זמין.
+- בדיקה תחבירית של ששת קובצי JavaScript הנטענים בדפדפן בודדה את השגיאה ל-`typesetter.js`; יתר הקבצים עברו ניתוח תחביר.
+- השורש: חסר סוגר מסולסל שסוגר את הלולאה `for (const el of els)` בפונקציית snapshot של עקבות השלבים, מיד לאחר `nodes.push(node)`. התיקון מוסיף את הסוגר החסר בלבד.
+- נוסף שלב CI שבודק תחביר של כל קובצי JavaScript הנטענים בדפדפן לפני בדיקות ה-smoke.
+- בדיקת parser מקומית לקובץ המתוקן עברה. **עדיין אין אישור לתקינות מנוע הביקורת או לאיכות העימוד**: נדרשות ריצות CI מוצלחות, כולל מסמך מלא `very_long_test_text.txt`, בדיקה חוזרת, שימור תוכן, שלמות עקבות ובדיקת עיטורים פעילים. שתי הריצות שנכשלו לא הפיקו מדדי עימוד תקפים.
+- נשמרה הפרדה מלאה בין V23 ל-V21.

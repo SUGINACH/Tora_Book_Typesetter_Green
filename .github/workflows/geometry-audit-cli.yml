@@ -28,6 +28,12 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check CLI syntax
         run: node --check tools/geometry-audit-cli.js
+      - name: Check browser script syntax
+        run: |
+          for file in decorations.js typesetter.js settings-manager.js app.js renderer-bridge.js geometry-audit.js; do
+            echo "Checking $file"
+            node --check "$file"
+          done
       - name: Check CLI help
         run: node tools/geometry-audit-cli.js --help
       - name: Run geometry audit smoke test

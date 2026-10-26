@@ -3397,3 +3397,13 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - נוסף `V23/SESSION_HANDOFF_2026-10-27.md` כדי לשמר את נקודת העבודה, קישורי CI, הכשל האחרון, דרישות המשתמש, הממצאים הפתוחים וסדר הפעולות.
 - מצב CI בעת כתיבת המסמך: CLI run 40420451902 נכשל ב-timeout של `page.waitForFunction` בשורה 759; Pages run 40420451495 עבר אך אינו מאמת את בדיקות העימוד. אין להמשיך כאילו המכשור אומת.
 - מסמך המעבר מפנה תחילה לתיקון timeout ולבדיקת עקבות/דטרמיניזם, ורק לאחר מכן למקרי סוף פרק, פיצול הערות שוליים, סוגריים מרובעים רצופים ובידוד פרקים.
+
+
+## 2026-10-27 — Fix renderer-blocking JavaScript syntax error (V23)
+
+- Inspected completed CLI run [40422082291](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40422082291) and full-document run [40422082250](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40422082250). Both reported `SyntaxError: Unexpected token ')'`, with `window.typesetDocument` undefined and `window.__geomAudit.audit` available. The long input was present and non-empty (3,424,454 bytes), but typesetting never started; these runs do not provide layout-quality results.
+- Parsed each browser-loaded JavaScript file independently. The syntax error was isolated to `typesetter.js`; the other five loaded scripts parsed successfully.
+- Root cause: the `for (const el of els)` loop in the step-by-step snapshot function was missing its closing brace after `nodes.push(node)`. Added the missing brace only; no pagination, balancing, CSS, settings, or rendering policy was changed.
+- Added a CI preflight step to run `node --check` on every browser-loaded JavaScript file before the smoke test, so future syntax failures identify the precise file before a readiness timeout.
+- Parser validation of the corrected `typesetter.js` passes. Full confirmation remains pending CI: CLI smoke and the complete `very_long_test_text.txt` run must pass; then inspect repeat determinism, trace coverage, content preservation and active ornaments. The failed runs provide no valid layout-quality results.
+- Scope: V23 only. No merge or cherry-pick into V21.
