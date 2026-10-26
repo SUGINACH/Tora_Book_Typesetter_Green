@@ -379,6 +379,13 @@ function markdown(r) {
       '- End-note coverage: ' + (r.geometry.textConservationAudit?.endNoteAudit ? (r.geometry.textConservationAudit.endNoteAudit.sourceCount + ' source end notes; metadata missing/mismatches ' + r.geometry.textConservationAudit.endNoteAudit.missingCount + '/' + r.geometry.textConservationAudit.endNoteAudit.mismatchCount + '; rendered text missing ' + r.geometry.textConservationAudit.endNoteAudit.renderedTextMissingCount) : 'not available'),
       '- Issues: ' + (s.total ?? r.audit.issues.length),
       '- High: ' + (s.high || 0) + ' | Medium: ' + (s.medium || 0) + ' | Low: ' + (s.low || 0),
+      '', '## Active geometry gate', '',
+      '- Enabled: ' + (r.run.activeGeometryGate?.enabled ? 'yes' : 'no'),
+      '- Result: ' + (r.run.activeGeometryGate?.passed === true ? 'PASS' : r.run.activeGeometryGate?.enabled ? 'FAIL' : 'not enabled'),
+      '- Blocking geometry findings: ' + (r.run.activeGeometryGate?.findingCount ?? 'n/a'),
+      '- Non-blocking note-marker rounding findings: ' + (r.run.activeGeometryGate?.nonBlockingContainmentRoundingCount ?? 0),
+      '- Unexpected/malformed containment-rounding findings (blocking): ' + (r.run.activeGeometryGate?.blockingUnexpectedContainmentRoundingCount ?? 0),
+      '- Policy: ' + (r.run.activeGeometryGate?.nonBlockingContainmentRoundingPolicy || 'not applicable'),
       '', '## Issue counts by kind', '', '| Kind | Count |', '|---|---:|'];
     const kinds = Object.entries(s.byKind || {}).sort((a,b) => b[1]-a[1]);
     if (!kinds.length) lines.push('| None | 0 |');
@@ -1394,9 +1401,19 @@ async function main() {
                 'fn-line-overflow', 'page-overflow'
             ]);
             const allIssues = Array.isArray(data.issues) ? data.issues : [];
-            const nonBlockingRoundingFindings = allIssues.filter(issue =>
-                issue.kind === 'containment-rounding');
-            const geometryFindings = allIssues.filter(issue => geometryKinds.has(issue.kind));
+            // A rounding finding is non-blocking only when the audit identifies the
+            // child as a note marker and measures a small, finite protrusion <= 3px.
+            // Any malformed/unexpected "containment-rounding" record remains blocking.
+            const isDocumentedNoteMarkerRounding = issue =>
+                issue.kind === 'containment-rounding' &&
+                issue.childType === 'note-marker' &&
+                Number.isFinite(issue.overflowPx) &&
+                issue.overflowPx >= 0 &&
+                issue.overflowPx <= 3;
+            const nonBlockingRoundingFindings = allIssues.filter(isDocumentedNoteMarkerRounding);
+            const geometryFindings = allIssues.filter(issue =>
+                geometryKinds.has(issue.kind) ||
+                (issue.kind === 'containment-rounding' && !isDocumentedNoteMarkerRounding(issue)));
             if (geometryFindings.length) {
                 const sample = geometryFindings.slice(0, 8).map(issue =>
                     (issue.kind || 'unknown') + (issue.location ? ' @ ' + issue.location : '') +
@@ -1498,7 +1515,7 @@ async function main() {
             run:{ input:path.relative(root,inputPath).split(path.sep).join('/'), inputBytes:Buffer.byteLength(inputText,'utf8'),
               generatedAt:new Date().toISOString(), branch:process.env.GITHUB_REF_NAME || null,
               gitCommit:process.env.GITHUB_SHA || null, viewport:{width:args.viewportWidth,height:args.viewportHeight,deviceScaleFactor:1},
-              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding').length, nonBlockingContainmentRoundingPolicy:'documented note-marker superscript protrusion <= 3px; findings remain in audit issue inventory'}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, browser:'Chromium headless' },
+              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, browser:'Chromium headless' },
             pageCount:data.pageCount,
             geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
             audit:{summary:data.summary,issues:data.issues},
