@@ -1381,17 +1381,22 @@ async function main() {
             }
 
             // Non-zero rectangles prove rendering, not correct placement. The active fixture
-            // therefore fails on geometric containment/overlap AND explicit overflow classes
-            // emitted by geometry-audit.js. Keep column-balance and typography-policy findings
-            // separate: they are evaluated by their own deterministic gates.
+            // fails on geometric containment/overlap and explicit overflow classes emitted by
+            // geometry-audit.js. The audit itself classifies a note-marker protrusion <= 3px as
+            // LOW "containment-rounding" because superscript inline boxes can extend above the
+            // paragraph line box. Preserve those findings in the report, but do not let this
+            // already-documented benign class block the geometry gate. All other geometry classes
+            // remain blocking; column-balance and typography-policy findings have separate gates.
             const geometryKinds = new Set([
-                'containment', 'containment-rounding', 'overlap',
+                'containment', 'overlap',
                 'side-note-overflow', 'fn-overflow', 'pn-overflow',
                 'fn-page-overflow', 'fn-pn-overflow', 'fn-containment',
                 'fn-line-overflow', 'page-overflow'
             ]);
-            const geometryFindings = (Array.isArray(data.issues) ? data.issues : [])
-                .filter(issue => geometryKinds.has(issue.kind));
+            const allIssues = Array.isArray(data.issues) ? data.issues : [];
+            const nonBlockingRoundingFindings = allIssues.filter(issue =>
+                issue.kind === 'containment-rounding');
+            const geometryFindings = allIssues.filter(issue => geometryKinds.has(issue.kind));
             if (geometryFindings.length) {
                 const sample = geometryFindings.slice(0, 8).map(issue =>
                     (issue.kind || 'unknown') + (issue.location ? ' @ ' + issue.location : '') +
@@ -1399,7 +1404,7 @@ async function main() {
                 );
                 activeGeometryGateFailures = geometryFindings;
                 process.stderr.write('Active geometry gate failed: ' + geometryFindings.length +
-                    ' containment/overlap/overflow finding(s): ' + sample.join(' | ') +
+                    ' blocking containment/overlap/overflow finding(s): ' + sample.join(' | ') +
                     '\\nDiagnostic report will still be written before the process exits nonzero.\\n');
             }
         }
@@ -1493,7 +1498,7 @@ async function main() {
             run:{ input:path.relative(root,inputPath).split(path.sep).join('/'), inputBytes:Buffer.byteLength(inputText,'utf8'),
               generatedAt:new Date().toISOString(), branch:process.env.GITHUB_REF_NAME || null,
               gitCommit:process.env.GITHUB_SHA || null, viewport:{width:args.viewportWidth,height:args.viewportHeight,deviceScaleFactor:1},
-              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, browser:'Chromium headless' },
+              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding').length, nonBlockingContainmentRoundingPolicy:'documented note-marker superscript protrusion <= 3px; findings remain in audit issue inventory'}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, browser:'Chromium headless' },
             pageCount:data.pageCount,
             geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
             audit:{summary:data.summary,issues:data.issues},
