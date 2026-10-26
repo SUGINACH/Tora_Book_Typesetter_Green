@@ -43,6 +43,22 @@ jobs:
         run: |
           test -s ./very_long_test_text.txt
           wc -c ./very_long_test_text.txt
+      - name: Record reproducible run fingerprint
+        run: |
+          mkdir -p artifacts
+          node - <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync('artifacts/run-fingerprint.json', JSON.stringify({
+            repository: process.env.GITHUB_REPOSITORY,
+            ref: process.env.GITHUB_REF,
+            sha: process.env.GITHUB_SHA,
+            runId: process.env.GITHUB_RUN_ID,
+            runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            runnerOs: process.env.RUNNER_OS,
+            nodeVersion: process.version,
+            workflow: '.github/workflows/geometry-audit-long.yml'
+          }, null, 2) + '\\n');
+          NODE
       - name: Run long-document geometry audit
         run: npm run audit:geometry:long -- --fail-on high --repeat-check --require-note-marker-line-diagnostics
       - name: Assert terminal residual fallbacks do not leave sparse last lines
@@ -83,4 +99,5 @@ jobs:
           path: |
             artifacts/geometry-audit.json
             artifacts/geometry-audit-summary.md
+            artifacts/run-fingerprint.json
           if-no-files-found: warn
