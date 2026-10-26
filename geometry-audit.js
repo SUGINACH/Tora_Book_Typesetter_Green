@@ -1875,6 +1875,7 @@ function auditSquareBracketScopes(issues) {
 function auditGeometry(model) {
     const issues = [];
     let containerGapPagesEvaluated = 0;
+    const containerGapNotEvaluatedReasons = {};
     for (const page of model.pages) {
         for (const c of page.children) annotateParents(c, page);
         page._parent = null;
@@ -1890,7 +1891,12 @@ function auditGeometry(model) {
         }
         auditSparsePage(page, issues);
         const containerGapCheck = auditContainerGaps(page, issues);
-        if (containerGapCheck && containerGapCheck.checked) containerGapPagesEvaluated++;
+        if (containerGapCheck && containerGapCheck.checked) {
+            containerGapPagesEvaluated++;
+        } else {
+            const reason = containerGapCheck?.reason || 'unknown-unchecked-reason';
+            containerGapNotEvaluatedReasons[reason] = (containerGapNotEvaluatedReasons[reason] || 0) + 1;
+        }
         auditOverflowToFootnote(page, issues);
         auditPageOverflow(page, issues);
     }
@@ -1926,6 +1932,9 @@ function auditGeometry(model) {
                 enabled: true,
                 pageCount: model.pages.length,
                 pagesEvaluated: containerGapPagesEvaluated,
+                pagesNotEvaluated: model.pages.length - containerGapPagesEvaluated,
+                notEvaluatedReasons: containerGapNotEvaluatedReasons,
+                coverageComplete: containerGapPagesEvaluated === model.pages.length,
                 warningThresholdPx: CONTAINER_GAP_WARN_PX,
                 mediumThresholdPx: CONTAINER_GAP_MEDIUM_PX,
                 findingCount: issues.filter(issue => issue.kind === 'container-gap').length

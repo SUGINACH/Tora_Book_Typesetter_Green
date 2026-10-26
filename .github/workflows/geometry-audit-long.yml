@@ -159,19 +159,26 @@ jobs:
             diagnosticGate: 'PASS'
           }));
           NODE
-      - name: Assert container-gap diagnostics cover the full document
+      - name: Assert container-gap diagnostics account for every page
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           for (const file of ['./artifacts/geometry-audit.json', './artifacts/geometry-audit-ornaments.json']) {
             const report = JSON.parse(fs.readFileSync(file, 'utf8'));
             const check = report.audit?.checks?.containerGap;
+            const reasonCount = check?.notEvaluatedReasons && typeof check.notEvaluatedReasons === 'object'
+              ? Object.values(check.notEvaluatedReasons).reduce((sum, count) => sum + (Number.isInteger(count) && count > 0 ? count : 0), 0)
+              : 0;
             if (!check || check.enabled !== true || check.pageCount !== report.pageCount ||
-                check.pagesEvaluated !== report.pageCount ||
+                !Number.isInteger(check.pagesEvaluated) || check.pagesEvaluated < 0 ||
+                !Number.isInteger(check.pagesNotEvaluated) || check.pagesNotEvaluated < 0 ||
+                check.pagesEvaluated + check.pagesNotEvaluated !== check.pageCount ||
+                reasonCount !== check.pagesNotEvaluated ||
+                check.coverageComplete !== (check.pagesNotEvaluated === 0) ||
                 !Number.isFinite(check.warningThresholdPx) ||
                 !Number.isFinite(check.mediumThresholdPx) ||
                 check.findingCount !== (report.audit?.issues || []).filter(issue => issue.kind === 'container-gap').length) {
-              console.error('Container-gap diagnostics are missing, incomplete, or inconsistent:', file, check);
+              console.error('Container-gap accounting is missing, incomplete, or inconsistent:', file, check);
               process.exit(1);
             }
             const malformed = (report.audit?.issues || []).filter(issue =>
@@ -184,8 +191,11 @@ jobs:
               process.exit(1);
             }
             console.log(JSON.stringify({file, pageCount: check.pageCount, pagesEvaluated: check.pagesEvaluated,
+              pagesNotEvaluated: check.pagesNotEvaluated, notEvaluatedReasons: check.notEvaluatedReasons,
+              coverageComplete: check.coverageComplete,
               warningThresholdPx: check.warningThresholdPx, mediumThresholdPx: check.mediumThresholdPx,
-              findingCount: check.findingCount, gate: 'PASS'}));
+              findingCount: check.findingCount, accountingGate: 'PASS',
+              geometryCoverage: check.coverageComplete ? 'COMPLETE' : 'INCOMPLETE_REQUIRES_FOLLOWUP'}));
           }
           NODE
       - name: Upload long-document audit report
