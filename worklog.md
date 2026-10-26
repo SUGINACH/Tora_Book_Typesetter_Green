@@ -1,3 +1,15 @@
+## 2026-10-26 — Long-document baseline and active-ornament coverage (V23)
+
+- Retrieved and analyzed long-document run [40355467612](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40355467612), commit `5519b85f42e3d56a2c7fabd7f89c593a28199e99`. Result: PASS, 639 pages, 27 findings (0 HIGH, 4 MEDIUM, 23 LOW), deterministic repeat hash, 3,105/3,105 paragraphs, 529/529 headings, 2,042/2,042 side notes, 858/858 valid decision records, and no page/console errors. Full artifact: [geometry-audit-long-report](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40355467612/artifacts/12665284313).
+- Added `V23/BASELINE_LONG_AUDIT_2026-10-26.md` to preserve the exact metrics, issue inventory, limitations, and triage order. Commit: `841727fd3f5b8e6d0ce1c5c51c6779e07e02a05a`.
+- Verified smoke run [40355533501](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40355533501) PASS on `7cf6aebd3bd9747c32c0284150696f51dd74c33c`; its checks include active-ornament smoke fixtures, recto/verso headers, H2 geometry, bracket-scope diagnostics, empty/missing columns, and explicit no-legal-split decisions.
+- The long baseline's ornament coverage is incomplete by configuration: all ornament settings were disabled. Added a second full-document audit to `.github/workflows/geometry-audit-long.yml` using existing `tests/fixtures/ornament-geometry-settings.json`, with `--require-ornaments`, repeat determinism, note-marker diagnostics, and required section-divider/note-rule/header geometry. It writes separate artifacts so the default-settings baseline remains intact. Workflow change commit: `30ac3f757ac95b718848a170de37315722ae79de`.
+- New long audit run [40369377579](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40369377579) and smoke run [40369377287](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40369377287) were queued on `30ac3f757ac95b718848a170de37315722ae79de` when this entry was prepared. Results must be checked before claiming active-ornament long-document coverage passes.
+- Triage: do not make speculative layout changes. First obtain active-ornament full-document results; then inspect the 7% sparse page (page label `תק`, index 501) and manually validate the three cross-paragraph square-bracket scopes against the source. Treat them as diagnostics until source intent is confirmed. The three unmatched round closing parentheses are a separate document-level finding and already include source paragraph/character context in the audit.
+- Scope remains V23 only; no engine algorithm change is claimed and V21 remains untouched.
+
+---
+
 ## 2026-10-26 — Research report and reproducible long-audit fingerprint (V23)
 
 - Added `V23/RESEARCH_DETERMINISTIC_TYPESSETTING_ENGINE.md`, a Hebrew engineering research synthesis covering Knuth–Plass, CSS fragmentation/paged media, text shaping, configuration governance, visual regression, architecture, decision-ledger requirements, test matrix, and release gates. Commit: `a63e9aa8eb77464b73d7da92c8d5eb5201b13e33`.
