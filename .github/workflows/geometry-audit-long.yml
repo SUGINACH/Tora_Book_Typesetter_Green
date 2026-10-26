@@ -122,6 +122,43 @@ jobs:
             dividerHeaderGate: 'PASS'
           }));
           NODE
+      - name: Assert global-justify rollback residuals are explicitly diagnosed
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('./artifacts/geometry-audit-ornaments.json', 'utf8'));
+          const issues = report.audit?.issues || [];
+          const parseDiagnostic = value => {
+            if (value && typeof value === 'object') return value;
+            if (typeof value !== 'string') return null;
+            try { return JSON.parse(value); } catch (_) { return null; }
+          };
+          const rollbackResiduals = issues.filter(issue => {
+            if (issue.kind !== 'imbalance') return false;
+            const diagnostic = parseDiagnostic(issue.layoutMetrics?.globalJustifyDiagnostic);
+            return diagnostic?.rollback?.outerGrowth === true &&
+              diagnostic?.rollback?.tallestGrowth === true;
+          });
+          const misclassified = rollbackResiduals.filter(issue =>
+            issue.balanceOutcome !== 'global-justify-rollback-residual' ||
+            issue.balanceDiagnosis?.source !== 'global-justify-diagnostic' ||
+            issue.balanceDiagnosis?.reason !== 'rollback-after-outer-and-tallest-growth');
+          if (misclassified.length) {
+            console.error('Global-justify rollback residuals lack explicit diagnosis:', misclassified.map(issue => ({
+              pageIdx: issue.pageIdx,
+              diff: issue.diff,
+              balanceOutcome: issue.balanceOutcome,
+              balanceDiagnosis: issue.balanceDiagnosis
+            })));
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            globalJustifyRollbackResidualCount: rollbackResiduals.length,
+            allExplicitlyDiagnosed: true,
+            findingsRemainInIssueInventory: true,
+            diagnosticGate: 'PASS'
+          }));
+          NODE
       - name: Upload long-document audit report
         if: always()
         uses: actions/upload-artifact@v4
