@@ -178,6 +178,38 @@ jobs:
           NODE
       - name: Run active-ornament geometry smoke test
         run: node tools/geometry-audit-cli.js --input ./tests/fixtures/ornament-geometry-smoke.txt --settings ./tests/fixtures/ornament-geometry-settings.json --report ./artifacts/ornament-smoke-report.json --summary ./artifacts/ornament-smoke-summary.md --fail-on none --require-geometry-features
+      - name: Assert active geometry gate policy is explicit
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('./artifacts/ornament-smoke-report.json', 'utf8'));
+          const gate = report.run?.activeGeometryGate;
+          if (!gate || gate.enabled !== true || gate.passed !== true) {
+            console.error('Active geometry gate must be enabled and pass in the ornament smoke fixture:', gate);
+            process.exit(1);
+          }
+          if (!Number.isInteger(gate.nonBlockingContainmentRoundingCount) ||
+              !Number.isInteger(gate.blockingUnexpectedContainmentRoundingCount) ||
+              typeof gate.nonBlockingContainmentRoundingPolicy !== 'string') {
+            console.error('Active geometry gate must report its explicit rounding policy and counts:', gate);
+            process.exit(1);
+          }
+          const rounding = (report.audit?.issues || []).filter(issue => issue.kind === 'containment-rounding');
+          const eligible = issue => issue.childType === 'note-marker' &&
+            Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3;
+          const unexpected = rounding.filter(issue => !eligible(issue));
+          if (unexpected.length) {
+            console.error('Unexpected containment-rounding records must not be silently waived:', unexpected);
+            process.exit(1);
+          }
+          if (gate.nonBlockingContainmentRoundingCount !== rounding.length ||
+              gate.blockingUnexpectedContainmentRoundingCount !== 0) {
+            console.error('Gate counts must match the audited rounding findings:', { gate, rounding: rounding.length });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({ activeGeometryGate: 'PASS', roundingFindings: rounding.length,
+            nonBlockingPolicy: gate.nonBlockingContainmentRoundingPolicy }));
+          NODE
       - name: Run distinct recto/verso header geometry smoke test
         run: node tools/geometry-audit-cli.js --input ./tests/fixtures/ornament-geometry-parity-smoke.txt --settings ./tests/fixtures/ornament-geometry-parity-settings.json --report ./artifacts/ornament-parity-report.json --summary ./artifacts/ornament-parity-summary.md --fail-on none --require-geometry-features
       - name: Run active H2 title top/bottom geometry smoke test
