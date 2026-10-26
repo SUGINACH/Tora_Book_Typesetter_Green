@@ -91,6 +91,37 @@ jobs:
             sparseLineGate: 'PASS'
           }));
           NODE
+      - name: Run long-document geometry audit with active ornaments
+        run: |
+          node tools/geometry-audit-cli.js \
+            --input ./very_long_test_text.txt \
+            --settings ./tests/fixtures/ornament-geometry-settings.json \
+            --timeout-ms 900000 \
+            --report ./artifacts/geometry-audit-ornaments.json \
+            --summary ./artifacts/geometry-audit-ornaments-summary.md \
+            --fail-on high \
+            --repeat-check \
+            --require-ornaments \
+            --require-note-marker-line-diagnostics
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('./artifacts/geometry-audit-ornaments.json', 'utf8'));
+          const features = report.geometry?.decorativeGeometryDomCoverage || {};
+          const required = ['sectionDivider', 'noteRule', 'topHeader', 'topHeaderDivider'];
+          const missing = required.filter(key => !(features[key] > 0));
+          if (missing.length) {
+            console.error('Required long-document divider/header geometry missing or zero:', {
+              missing,
+              measured: features
+            });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            activeOrnamentCoverage: report.geometry?.ornamentDomCoverage || {},
+            decorativeGeometryCoverage: features,
+            dividerHeaderGate: 'PASS'
+          }));
+          NODE
       - name: Upload long-document audit report
         if: always()
         uses: actions/upload-artifact@v4
@@ -99,5 +130,7 @@ jobs:
           path: |
             artifacts/geometry-audit.json
             artifacts/geometry-audit-summary.md
+            artifacts/geometry-audit-ornaments.json
+            artifacts/geometry-audit-ornaments-summary.md
             artifacts/run-fingerprint.json
           if-no-files-found: warn
