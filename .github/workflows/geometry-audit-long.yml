@@ -171,6 +171,20 @@ jobs:
               ? Object.values(check.notEvaluatedReasons).reduce((sum, count) => sum + (Number.isInteger(count) && count > 0 ? count : 0), 0)
               : 0;
             const notEvaluatedPages = check?.notEvaluatedPages;
+            const excludedPages = check?.excludedPages;
+            if (!check || !Array.isArray(excludedPages) ||
+                excludedPages.length !== check.pagesExcluded ||
+                excludedPages.some(page =>
+                  !Number.isInteger(page.pageIdx) ||
+                  typeof page.reason !== 'string' ||
+                  typeof page.specialPageType !== 'string' ||
+                  typeof page.pageClass !== 'string')) {
+              console.error('Explicit page exclusions are missing or inconsistent:', file, {
+                pagesExcluded: check?.pagesExcluded,
+                excludedPages: Array.isArray(excludedPages) ? excludedPages.length : null
+              });
+              process.exit(1);
+            }
             if (!Array.isArray(notEvaluatedPages) ||
                 notEvaluatedPages.length !== check.pagesNotEvaluated ||
                 notEvaluatedPages.some(page =>
@@ -187,7 +201,8 @@ jobs:
             if (!check || check.enabled !== true || check.pageCount !== report.pageCount ||
                 !Number.isInteger(check.pagesEvaluated) || check.pagesEvaluated < 0 ||
                 !Number.isInteger(check.pagesNotEvaluated) || check.pagesNotEvaluated < 0 ||
-                check.pagesEvaluated + check.pagesNotEvaluated !== check.pageCount ||
+                !Number.isInteger(check.pagesExcluded) || check.pagesExcluded < 0 ||
+                check.pagesEvaluated + check.pagesExcluded + check.pagesNotEvaluated !== check.pageCount ||
                 reasonCount !== check.pagesNotEvaluated ||
                 check.coverageComplete !== (check.pagesNotEvaluated === 0) ||
                 !Number.isFinite(check.warningThresholdPx) ||
@@ -210,6 +225,8 @@ jobs:
               coverageComplete: check.coverageComplete,
               warningThresholdPx: check.warningThresholdPx, mediumThresholdPx: check.mediumThresholdPx,
               findingCount: check.findingCount,
+              pagesExcluded: check.pagesExcluded, excludedReasons: check.excludedReasons,
+              excludedPageSamples: excludedPages.slice(0, 25),
               notEvaluatedPageSamples: notEvaluatedPages.slice(0, 25).map(page => ({
                 pageIdx: page.pageIdx, pageLabel: page.pageLabel, reason: page.reason,
                 domPageIndex: page.domPageIndex, pageClass: page.pageClass,

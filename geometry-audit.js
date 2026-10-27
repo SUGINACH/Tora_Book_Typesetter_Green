@@ -1493,7 +1493,28 @@ function auditContainerGaps(page, issues) {
     const pageEls = Array.from(document.querySelectorAll('#book-container .a4-page'));
     const pageIndex = pageEls.indexOf(pageEl);
     const bodyFlow = pageEl.querySelector('.page-body-flow');
-    if (!bodyFlow) return { checked: false, reason: 'missing-body-flow' };
+    if (!bodyFlow) {
+        // These explicit renderer roles do not carry the body-flow whose terminal
+        // gap this audit measures. Unknown page roles remain uncovered.
+        const pageClass = String(pageEl.className || '');
+        const specialPageRoles = [
+            ['main-shaar-page', 'main-title-page'],
+            ['back-shaar-page', 'back-title-page'],
+            ['sub-shaar-page', 'section-divider-page'],
+            ['blank-page', 'intentional-blank-page']
+        ];
+        const role = specialPageRoles.find(([className]) =>
+            pageEl.classList.contains(className));
+        if (role) {
+            return {
+                checked: true,
+                excluded: 'explicit-special-page-role',
+                specialPageType: role[1],
+                pageClass
+            };
+        }
+        return { checked: false, reason: 'missing-body-flow' };
+    }
     const flowRect = bodyFlow.getBoundingClientRect();
     if (!(flowRect.height > 0)) return { checked: false, reason: 'zero-body-flow' };
 
@@ -1875,6 +1896,9 @@ function auditSquareBracketScopes(issues) {
 function auditGeometry(model) {
     const issues = [];
     let containerGapPagesEvaluated = 0;
+    let containerGapPagesExcluded = 0;
+    const containerGapExcludedReasons = {};
+    const containerGapExcludedPages = [];
     const containerGapNotEvaluatedReasons = {};
     const containerGapNotEvaluatedPages = [];
     for (const page of model.pages) {
@@ -1892,7 +1916,18 @@ function auditGeometry(model) {
         }
         auditSparsePage(page, issues);
         const containerGapCheck = auditContainerGaps(page, issues);
-        if (containerGapCheck && containerGapCheck.checked) {
+        if (containerGapCheck && containerGapCheck.checked && containerGapCheck.excluded) {
+            containerGapPagesExcluded++;
+            const reason = containerGapCheck.excluded;
+            containerGapExcludedReasons[reason] = (containerGapExcludedReasons[reason] || 0) + 1;
+            containerGapExcludedPages.push({
+                pageIdx: page.idx,
+                pageLabel: page.label,
+                reason,
+                specialPageType: containerGapCheck.specialPageType || null,
+                pageClass: containerGapCheck.pageClass || null
+            });
+        } else if (containerGapCheck && containerGapCheck.checked) {
             containerGapPagesEvaluated++;
         } else {
             const reason = containerGapCheck?.reason || 'unknown-unchecked-reason';
@@ -1954,10 +1989,13 @@ function auditGeometry(model) {
                 enabled: true,
                 pageCount: model.pages.length,
                 pagesEvaluated: containerGapPagesEvaluated,
-                pagesNotEvaluated: model.pages.length - containerGapPagesEvaluated,
+                pagesExcluded: containerGapPagesExcluded,
+                excludedReasons: containerGapExcludedReasons,
+                excludedPages: containerGapExcludedPages,
+                pagesNotEvaluated: model.pages.length - containerGapPagesEvaluated - containerGapPagesExcluded,
                 notEvaluatedReasons: containerGapNotEvaluatedReasons,
                 notEvaluatedPages: containerGapNotEvaluatedPages,
-                coverageComplete: containerGapPagesEvaluated === model.pages.length,
+                coverageComplete: containerGapPagesEvaluated + containerGapPagesExcluded === model.pages.length,
                 warningThresholdPx: CONTAINER_GAP_WARN_PX,
                 mediumThresholdPx: CONTAINER_GAP_MEDIUM_PX,
                 findingCount: issues.filter(issue => issue.kind === 'container-gap').length
