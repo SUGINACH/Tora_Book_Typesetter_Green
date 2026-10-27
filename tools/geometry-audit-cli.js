@@ -36,7 +36,7 @@ function parseArgs(argv) {
             case '--step-audit-disabled': o.stepAuditDisabled = true; break;
             case '--step-audit-page-indexes': {
                 const raw = take().split(',').map(v => v.trim());
-                if (!raw.length || raw.some(v => !/^\\d+$/.test(v))) throw new Error('--step-audit-page-indexes must be a comma-separated list of zero-based nonnegative integers');
+                if (!raw.length || raw.some(v => !/^\d+$/.test(v))) throw new Error('--step-audit-page-indexes must be a comma-separated list of zero-based nonnegative integers');
                 o.stepAuditPageIndexes = [...new Set(raw.map(Number))];
                 break;
             }
