@@ -3515,3 +3515,12 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - חיזקתי את שער ה־workflow כך שידרוש גבולות סופיים ולא שליליים, computed styles חיוניים, שרשרת אבות לא ריקה, ילדים מדודים, מדדי טקסט אחרון בכל עמודה ולפחות שתי עמודות לכל `block-2col`; גם ילדי העמוד הבא נבדקים. זהו שינוי בשער האימות בלבד — ללא שינוי פריסה, CSS, ספי gap או סיווג ממצאים.
 - סטטוס בדיקות: ריצת v2 הקודמת עברה, אך השער המחמיר החדש טרם נבדק; אין להחשיבו מאומת עד לריצת CI על הקומיט החדש. יש לבדוק אם הנתונים הקיימים עומדים בחוזה המחמיר, ולתקן את חוזה הסכימה רק אם יוכח שהשדות החסרים הם תקינים ולא אם מדובר בכשל איסוף.
 - קישורים: [Geometry audit long 40453782419](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40453782419), [Geometry audit CLI 40453815268](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40453815268). V23 בלבד; אין מיזוג ל־V21.
+
+
+## עדכון 2026-10-27 — תיקון כשל תחבירי בשער gapContext v2
+
+- ריצת [Geometry audit long 40455121267](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40455121267) נכשלה בשלב אימות הדוח, לאחר ששתי ריצות הרינדור עצמן והבדיקות המקדימות עברו. השגיאה המדויקת הייתה `SyntaxError: missing ) after argument list` בקטע `malformed.filter` של שער הסכימה המחמיר. לכן הכשל נבע מתחביר קוד הבדיקה, לא מממצא גאומטרי שהתגלה במנוע.
+- [Geometry audit CLI 40455121272](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40455121272) עברה את כל בדיקות ה־smoke וה־regression.
+- תיקנתי את שער ה־workflow למבנה callback מדורג עם החזרות מוקדמות, כדי להפחית סיכון לסוגריים לא מאוזנים ולשפר קריאות. תנאי האימות נשמרו: context v2, גבולות מדידה תקינים, computed styles, ancestry וילדי גוף/עמוד הבא.
+- אין שינוי במנוע הפריסה או בנתוני הדוח. נדרשת ריצת CI חדשה כדי לאמת את תיקון התחביר ואת השער המחמיר מקצה לקצה. אין להחשיבו מאומת עד להצלחתה.
+- V23 בלבד; אין מיזוג ל־V21.

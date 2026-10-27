@@ -722,3 +722,12 @@
 - זוהה חולשה בשער הקודם: הוא לא דרש שרשרת אבות/ילדי גוף לא ריקים ולא בדק כל גבולות המדידה. חיזקתי את השער לדרוש מלוא rect מספרי, computed layout, ancestry, עמודות ותוכן מדוד גם בעמוד הבא. לא שונתה הפריסה.
 - השער המחמיר ממתין לאימות CI. אם ייכשל, יש לבחון את השדות החסרים מול המבנה בפועל ולתקן את האיסוף/החוזה בהתאם; אין להחליש את השער ללא ראיה.
 - ריצות רלוונטיות: [long audit 40453782419](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40453782419), [CLI 40453815268](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40453815268). V23 בלבד; ללא מיזוג ל־V21.
+
+
+## עדכון 2026-10-27 — תחקיר כשל שער gapContext v2
+
+- [ריצת המסמך המלא 40455121267](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40455121267) נכשלה בשלב 15, `Assert container-gap diagnostics account for every page`, עקב שגיאת תחביר JavaScript (`missing ) after argument list`) בשער החדש. שלבי הרינדור הרגיל והרינדור עם עיטורים עברו, אך שער הסכימה כלל לא הגיע להכרעה לגבי תקינות כל הממצאים.
+- [בדיקת CLI 40455121272](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40455121272) עברה את כל הבדיקות.
+- שער ה־workflow נכתב מחדש בצורה מדורגת וברורה יותר, תוך שמירת תנאי הסכימה המחמירים. אין שינוי במנוע העימוד.
+- תיקון זה ממתין לאימות CI חדש; אין להציג את שער הסכימה כמאומת עד שהבדיקה המלאה תעבור.
+- V23 בלבד; ללא מיזוג ל־V21.

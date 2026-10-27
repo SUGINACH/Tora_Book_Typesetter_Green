@@ -289,27 +289,31 @@ jobs:
               Array.isArray(node.columns) &&
               node.columns.every(isMeasuredColumn) &&
               (!String(node.className).includes('block-2col') || node.columns.length >= 2);
-            const malformed = (report.audit?.issues || []).filter(issue =>
-              issue.kind === 'container-gap' &&
-              (!Number.isFinite(issue.gapPx) || issue.gapPx <= check.warningThresholdPx ||
-               !['low', 'medium'].includes(issue.severity) ||
-               !['footnote-area-top', 'body-flow-bottom'].includes(issue.to) ||
-               !issue.gapContext || issue.gapContext.contextSchemaVersion !== 2 ||
-               !isMeasuredNode(issue.gapContext.lastTextElement) ||
-               !isMeasuredNode(issue.gapContext.bodyFlow) ||
-               !hasComputedLayout({computedLayout: issue.gapContext.lastTextComputedLayout}) ||
-               !Array.isArray(issue.gapContext.lastTextAncestorChain) ||
-               issue.gapContext.lastTextAncestorChain.length < 1 ||
-               issue.gapContext.lastTextAncestorChain.some(node => !isMeasuredNode(node)) ||
-               !Array.isArray(issue.gapContext.currentBodyFlowChildren) ||
-               issue.gapContext.currentBodyFlowChildren.length < 1 ||
-               issue.gapContext.currentBodyFlowChildren.some(node => !isMeasuredChild(node)) ||
-               (issue.gapContext.nextPage !== null &&
-                 (typeof issue.gapContext.nextPage !== 'object' ||
-                  typeof issue.gapContext.nextPage.pageClass !== 'string' ||
-                  typeof issue.gapContext.nextPage.hasBodyFlow !== 'boolean' ||
-                  !Array.isArray(issue.gapContext.nextPage.bodyFlowChildren) ||
-                  issue.gapContext.nextPage.bodyFlowChildren.some(node => !isMeasuredChild(node)))));
+            const malformed = (report.audit?.issues || []).filter(issue => {
+              if (issue.kind !== 'container-gap') return false;
+              const context = issue.gapContext;
+              if (!Number.isFinite(issue.gapPx) || issue.gapPx <= check.warningThresholdPx ||
+                  !['low', 'medium'].includes(issue.severity) ||
+                  !['footnote-area-top', 'body-flow-bottom'].includes(issue.to) ||
+                  !context || context.contextSchemaVersion !== 2) return true;
+              if (!isMeasuredNode(context.lastTextElement) ||
+                  !isMeasuredNode(context.bodyFlow) ||
+                  !hasComputedLayout({computedLayout: context.lastTextComputedLayout})) return true;
+              if (!Array.isArray(context.lastTextAncestorChain) ||
+                  context.lastTextAncestorChain.length < 1 ||
+                  context.lastTextAncestorChain.some(node => !isMeasuredNode(node))) return true;
+              if (!Array.isArray(context.currentBodyFlowChildren) ||
+                  context.currentBodyFlowChildren.length < 1 ||
+                  context.currentBodyFlowChildren.some(node => !isMeasuredChild(node))) return true;
+              if (context.nextPage !== null) {
+                if (!context.nextPage || typeof context.nextPage !== 'object' ||
+                    typeof context.nextPage.pageClass !== 'string' ||
+                    typeof context.nextPage.hasBodyFlow !== 'boolean' ||
+                    !Array.isArray(context.nextPage.bodyFlowChildren) ||
+                    context.nextPage.bodyFlowChildren.some(node => !isMeasuredChild(node))) return true;
+              }
+              return false;
+            });
             if (malformed.length) {
               console.error('Malformed container-gap finding:', file, malformed.slice(0, 5));
               process.exit(1);
