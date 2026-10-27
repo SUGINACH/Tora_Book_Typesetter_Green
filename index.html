@@ -883,7 +883,18 @@
                   <span class="btn-toggle-box"><span class="check-icon">✓</span>מנע מילה בודדת בשורה האחרונה של פסקה</span>
                 </label>
               </div>
-              <div class="hint">איזון טורים בסוף פרק ולפני כותרות שפורשות טור יחיד מתבצע אוטומטית לפי הצורך בפועל (אין צורך בהגדרה נפרדת).</div>
+              <div class="inline-cfg-row">
+                <label for="balance-chapter-end">איזון סוף פרק:</label>
+                <select id="balance-chapter-end" onchange="typesetDocument()" style="flex:1;">
+                  <option value="balance" selected="selected">איזון ספר פרק</option>
+                  <option value="fill">ללא איזון — מילוי עמוד</option>
+                </select>
+              </div>
+              <label class="btn-toggle full-width" title="כאשר אין חלוקה דו־טורית חוקית ונותר קטע פסקה קצר בסוף הבלוק, אפשר לפרוס אותו לרוחב שני הטורים כפתרון חלקי. ביטול האפשרות משמר את הזרימה המקורית ומציג אי־איזון אם נותר.">
+                <input type="checkbox" id="allow-terminal-residual-fallback" checked="checked" onchange="typesetDocument()">
+                <span class="btn-toggle-box"><span class="check-icon">✓</span>אפשר fallback מבני לקטע סופי קצר כשאין חלוקה חוקית</span>
+              </label>
+              <div class="hint">איזון סוף פרק הוא ברירת המחדל. fallback מבני הוא פתרון חלקי בלבד, ניתן לביטול, ואינו נחשב הוכחה לאיזון דו־טורי מלא.</div>
             </div>
           </div>
 

@@ -244,5 +244,7 @@
   "general-toc-count-numbering": true,
   "general-toc-show-numbering": true,
   "detailed-toc-count-numbering": true,
-  "detailed-toc-show-numbering": true
+  "detailed-toc-show-numbering": true,
+  "balance-chapter-end": "balance",
+  "allow-terminal-residual-fallback": true
 }

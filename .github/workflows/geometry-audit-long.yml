@@ -284,7 +284,8 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const cases = [
-            {file:'./artifacts/geometry-audit.json', expectedExcluded:[590]},
+            {file:'./artifacts/geometry-audit.json', expectedExcluded:[590],
+              requiredFindings:[{pageIdx:589,pageLabel:'תקפח',gapPx:177,to:'body-flow-bottom'}]},
             {file:'./artifacts/geometry-audit-ornaments.json', expectedExcluded:[588,608,628]}
           ];
           for (const item of cases) {
@@ -301,21 +302,32 @@ jobs:
                 page.interveningBlankPageClass?.includes('blank-page') &&
                 page.boundaryPageClass?.includes('sub-shaar-page')));
             const wronglyReported = findings.filter(issue=>item.expectedExcluded.includes(issue.pageIdx));
+            const missingRequiredFindings = (item.requiredFindings || []).filter(expected =>
+              !findings.some(issue => issue.pageIdx === expected.pageIdx && issue.pageLabel === expected.pageLabel &&
+                issue.to === expected.to && Math.abs(issue.gapPx - expected.gapPx) <= 0.5 &&
+                issue.hasVisibleFootnotes === false));
+            const targetFindingsIncorrectlyExcluded = (item.requiredFindings || []).filter(expected =>
+              excluded.some(page => page.pageIdx === expected.pageIdx));
             const unsupportedBlankExclusions = excluded.filter(page =>
               page.reason==='section-end-before-divider' &&
               page.interveningBlankPageClass?.includes('blank-page') &&
               (page.hasTerminalSectionDivider!==true ||
                !page.boundaryPageClass?.includes('sub-shaar-page') ||
                !Number.isInteger(page.boundaryPageIndex)));
-            if (!check || expectedMissing.length || wronglyReported.length || unsupportedBlankExclusions.length) {
+            if (!check || expectedMissing.length || wronglyReported.length || missingRequiredFindings.length ||
+                targetFindingsIncorrectlyExcluded.length || unsupportedBlankExclusions.length) {
               console.error('Terminal section boundary classification failed:',item.file,{
-                expectedMissing,wronglyReported,unsupportedBlankExclusions
+                expectedMissing,wronglyReported,missingRequiredFindings,
+                targetFindingsIncorrectlyExcluded,unsupportedBlankExclusions
               });
               process.exit(1);
             }
             console.log(JSON.stringify({
               file:item.file,
               expectedTerminalBoundaryPages:item.expectedExcluded,
+              requiredFindingsPreserved:(item.requiredFindings || []).map(item => ({
+                pageIdx:item.pageIdx,pageLabel:item.pageLabel,gapPx:item.gapPx
+              })),
               unsupportedBlankExclusions:unsupportedBlankExclusions.length,
               sectionBoundaryGate:'PASS'
             }));
@@ -482,6 +494,42 @@ jobs:
               })),
               accountingGate: 'PASS',
               geometryCoverage: check.coverageComplete ? 'COMPLETE' : 'INCOMPLETE_REQUIRES_FOLLOWUP'}));
+          }
+          NODE
+      - name: Assert sparse-page diagnostics account for every page and preserve chapter-end policy
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const files = ['./artifacts/geometry-audit.json', './artifacts/geometry-audit-ornaments.json'];
+          const knownRoles = new Map([
+            ['a4-page main-shaar-page','main-title-page'], ['a4-page back-shaar-page','back-title-page'],
+            ['a4-page sub-shaar-page','section-divider-page'], ['a4-page blank-page','intentional-blank-page']
+          ]);
+          for (const file of files) {
+            const report = JSON.parse(fs.readFileSync(file,'utf8'));
+            const check = report.audit?.checks?.sparsePage;
+            const issues = (report.audit?.issues || []).filter(issue=>issue.kind==='sparse-page');
+            const evaluated = check?.pagesEvaluated, excluded = check?.pagesExcluded, notEvaluated = check?.pagesNotEvaluated;
+            const excludedPages = check?.excludedPages, notEvaluatedPages = check?.notEvaluatedPages;
+            const validSpecialRole = page => page.reason === 'explicit-special-page-role' && knownRoles.get(page.pageClass) === page.specialPageType;
+            const validChapterEndFill = page => page.reason === 'section-end-before-divider' && page.chapterEndBalanceMode === 'fill' &&
+              page.hasTerminalSectionDivider === true && Number.isInteger(page.boundaryPageIndex) && page.boundaryPageClass?.includes('sub-shaar-page') &&
+              (page.interveningBlankPageClass == null || page.interveningBlankPageClass.includes('blank-page'));
+            const malformedExclusions = (excludedPages || []).filter(page => !validSpecialRole(page) && !validChapterEndFill(page) &&
+              !['chapter-end','document-end','no-visible-text'].includes(page.reason));
+            const invalidChapterModeFindings = issues.filter(issue => issue.isChapterEnd === true && issue.chapterEndBalanceMode !== 'balance');
+            const missingChapterEvidence = issues.filter(issue => issue.isChapterEnd === true &&
+              (typeof issue.chapterEndBalanceMode !== 'string' || issue.hasTerminalSectionDivider !== true ||
+               !Number.isInteger(issue.boundaryPageIndex) || !issue.boundaryPageClass?.includes('sub-shaar-page')));
+            if (!check || check.pageCount !== report.pageCount || evaluated + excluded + notEvaluated !== report.pageCount ||
+                excludedPages?.length !== excluded || notEvaluatedPages?.length !== notEvaluated || notEvaluated !== 0 ||
+                check.coverageComplete !== true || malformedExclusions.length || invalidChapterModeFindings.length || missingChapterEvidence.length) {
+              console.error('Sparse-page coverage or policy contract failed:',file,{pageCount:report.pageCount,evaluated,excluded,notEvaluated,
+                excludedRecords:excludedPages?.length,notEvaluatedRecords:notEvaluatedPages?.length,coverageComplete:check?.coverageComplete,
+                malformedExclusions,invalidChapterModeFindings,missingChapterEvidence}); process.exit(1);
+            }
+            console.log(JSON.stringify({file,pageCount:report.pageCount,evaluated,excluded,notEvaluated,
+              sparseFindings:issues.length,chapterEndFindings:issues.filter(i=>i.isChapterEnd).length,sparseCoverage:'PASS'}));
           }
           NODE
       - name: Run targeted causal trace for known medium imbalance

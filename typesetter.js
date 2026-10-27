@@ -1532,6 +1532,7 @@ function balanceColumns(block, colWidth, styleObj, snapshot, availableHeight = I
     block.removeAttribute('data-layout-balance-fallback-height-after');
     block.removeAttribute('data-layout-balance-fallback-width');
     block.removeAttribute('data-layout-balance-fallback-sparse-line');
+    block.removeAttribute('data-layout-balance-fallback-disabled');
     block.setAttribute('data-layout-balance-status', 'started');
     block.setAttribute('data-layout-balance-skip-reason', '');
     block.setAttribute('data-layout-balance-fallback', 'none');
@@ -1685,6 +1686,14 @@ function balanceColumns(block, colWidth, styleObj, snapshot, availableHeight = I
         const residualLines = residualLinesAtWidth(colWidth);
         const isShortTerminalResidual = items.length === 1 && items[0].type === 'p' &&
             !!residualParagraph && residualLines > 0 && residualLines <= (rules.minFirst + rules.minLast - 1);
+
+        const allowTerminalResidualFallback =
+            document.getElementById('allow-terminal-residual-fallback')?.checked ?? true;
+        if (isShortTerminalResidual && !allowTerminalResidualFallback) {
+            block.setAttribute('data-layout-balance-fallback', 'preserve-existing-flow-no-legal-split');
+            block.setAttribute('data-layout-balance-fallback-disabled', 'user-setting');
+            return;
+        }
 
         if (isShortTerminalResidual) {
             const side = rightOnlyParagraph ? 'right' : 'left';

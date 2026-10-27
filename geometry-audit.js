@@ -1772,7 +1772,16 @@ function auditSparsePage(page, issues) {
     const pageEls = Array.from(document.querySelectorAll('#book-container .a4-page'));
     const pageIndex = pageEls.indexOf(pageEl);
     const bodyFlow = pageEl.querySelector('.page-body-flow');
-    if (!bodyFlow) return { checked: false, reason: 'missing-body-flow' };
+    if (!bodyFlow) {
+        const pageClass = String(pageEl.className || '');
+        const specialPageRoles = [
+            ['main-shaar-page', 'main-title-page'], ['back-shaar-page', 'back-title-page'],
+            ['sub-shaar-page', 'section-divider-page'], ['blank-page', 'intentional-blank-page']
+        ];
+        const role = specialPageRoles.find(([className]) => pageEl.classList.contains(className));
+        if (role) return { checked: true, excluded: 'explicit-special-page-role', specialPageType: role[1], pageClass };
+        return { checked: false, reason: 'missing-body-flow', pageClass };
+    }
 
     const flowRect = bodyFlow.getBoundingClientRect();
     if (!(flowRect.height > 0)) return { checked: false, reason: 'zero-body-flow' };
@@ -1791,19 +1800,19 @@ function auditSparsePage(page, issues) {
     // סוף פרק: כותרת 2 בראש העמוד הבא מעידה שהעמוד הנוכחי מסתיים לפני פרק חדש.
     if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
 
-    // Match the container-gap rule: only exempt an explicit sub-shaar page when
-    // the current body flow contains the renderer's terminal section divider.
-    const nextPageIsSectionBoundary = !!(
-        nextPage?.classList.contains('sub-shaar-page') &&
-        bodyFlow.querySelector('.sec-divider-wrap')
-    );
-    if (nextPageIsSectionBoundary) {
-        return {
-            checked: true,
-            excluded: 'section-end-before-divider',
-            specialPageType: 'section-divider-page',
-            boundaryPageClass: String(nextPage.className || '')
-        };
+    // Chapter-end sparsity depends on the explicit balance/fill policy.
+    const chapterEndBalanceMode = document.getElementById('balance-chapter-end')?.value || 'balance';
+    const hasTerminalSectionDivider = !!bodyFlow.lastElementChild?.classList.contains('sec-divider-wrap');
+    const interveningBlankPage = !!nextPage?.classList.contains('blank-page');
+    const followingPage = interveningBlankPage ? pageEls[pageIndex + 2] : null;
+    const boundaryPage = nextPage?.classList.contains('sub-shaar-page') ? nextPage
+        : (interveningBlankPage && followingPage?.classList.contains('sub-shaar-page') ? followingPage : null);
+    const isChapterEnd = hasTerminalSectionDivider && !!boundaryPage;
+    if (isChapterEnd && chapterEndBalanceMode === 'fill') {
+        return { checked: true, excluded: 'section-end-before-divider', specialPageType: 'section-divider-page',
+            chapterEndBalanceMode, hasTerminalSectionDivider, boundaryPageIndex: pageEls.indexOf(boundaryPage),
+            boundaryPageClass: String(boundaryPage.className || ''),
+            interveningBlankPageClass: interveningBlankPage ? String(nextPage.className || '') : null };
     }
 
     const heading2 = pageEl.querySelector(heading2Selector);
@@ -1893,6 +1902,12 @@ function auditSparsePage(page, issues) {
         contentElementCount,
         estimatedLineCount: lineCount,
         startsChapter,
+        isChapterEnd,
+        chapterEndBalanceMode,
+        hasTerminalSectionDivider,
+        boundaryPageIndex: boundaryPage ? pageEls.indexOf(boundaryPage) : null,
+        boundaryPageClass: boundaryPage ? String(boundaryPage.className || '') : null,
+        interveningBlankPageClass: interveningBlankPage ? String(nextPage.className || '') : null,
         firstTextTop: Number.isFinite(firstTextTop) ? Math.round(firstTextTop - flowRect.top) : null,
         lastTextBottom: Math.round(lastTextBottom - flowRect.top),
         // Context is diagnostic only: it helps distinguish a legitimate structural
@@ -2120,7 +2135,12 @@ function auditGeometry(model) {
                 reason,
                 specialPageType: sparsePageCheck.specialPageType || null,
                 domPageIndex: pageEl ? pageEls.indexOf(pageEl) : -1,
-                boundaryPageClass: sparsePageCheck.boundaryPageClass || null
+                pageClass: sparsePageCheck.pageClass || null,
+                chapterEndBalanceMode: sparsePageCheck.chapterEndBalanceMode || null,
+                hasTerminalSectionDivider: sparsePageCheck.hasTerminalSectionDivider ?? null,
+                boundaryPageIndex: Number.isInteger(sparsePageCheck.boundaryPageIndex) ? sparsePageCheck.boundaryPageIndex : null,
+                boundaryPageClass: sparsePageCheck.boundaryPageClass || null,
+                interveningBlankPageClass: sparsePageCheck.interveningBlankPageClass || null
             });
         } else if (sparsePageCheck && sparsePageCheck.checked) {
             sparsePagePagesEvaluated++;

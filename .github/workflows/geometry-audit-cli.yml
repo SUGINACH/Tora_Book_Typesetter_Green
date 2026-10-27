@@ -256,7 +256,7 @@ jobs:
           }));
           NODE
       - name: Run section-end boundary audit fixture
-        run: node tools/geometry-audit-cli.js --input ./tests/fixtures/section-end-gap-audit.txt --report ./artifacts/section-end-gap-report.json --summary ./artifacts/section-end-gap-summary.md --fail-on none
+        run: node tools/geometry-audit-cli.js --input ./tests/fixtures/section-end-gap-audit.txt --settings ./tests/fixtures/section-end-fill-settings.json --report ./artifacts/section-end-gap-report.json --summary ./artifacts/section-end-gap-summary.md --fail-on none
       - name: Assert section-end boundary exclusions remain explicit
         run: |
           node - <<'NODE'

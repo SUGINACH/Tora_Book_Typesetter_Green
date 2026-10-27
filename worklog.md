@@ -3699,3 +3699,13 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - containment-rounding: 0 issues פעילים, 6/10 רשומות note-marker נסבלות (default/ornaments). container-gap coverage מלאה; sparse-page coverage עדיין לא מלאה: 17/18 `missing-body-flow` לא מוערכים.
 - יש לאמת במפורש את מיפוי target סוף-החלק: JSON default מכיל gap ב-`pageIdx=589` (177px) אך gate מאמת exclusion ב-`pageIdx=590`. אין לסגור עד לאימות לפי PDF/manifest ותווית העמוד.
 - קובץ מעבר מפורט ופרומפט לפתיחה: `V23/CONTINUATION_2026-10-27.md`. עמוד 376 מושהה; V23 בלבד, אין מיזוג ל-V21.
+
+
+## 2026-10-27 — קבלת הערות המשתמש ותיקון חוזה sparse-page / fallback (V23)
+
+- המשתמש בדק את ה-PDF של run 40506660569 ואישר את יתר הממצאים. `sparse-page` ב-ornaments DOM indexes 588/628 הם סיומי פרק; תוקף הדיווח תלוי ב-`balance-chapter-end`. `structural-fallback` בעמודים 46/218/315/41/109/133 הוא מסלול מכוון כשאין חלוקה חוקית, אך פתרון חלקי הנשלט מההגדרות.
+- נוסף checkbox `allow-terminal-residual-fallback`, ברירת מחדל פעילה לשימור ההתנהגות. בכיבויו נשמרת הזרימה המקורית והאבחון נשאר מפורש.
+- נוסף select `balance-chapter-end` לערכי `balance` / `fill`, עם ברירת מחדל `balance`. במצב balance ממצאי sparse-page בסוף פרק נשארים issues; במצב fill הם מוחרגים רק אם מפריד הסיום הוא הילד האחרון והגבול המבני מאומת ישירות או דרך עמוד blank יחיד.
+- `auditSparsePage` מסווג עמודי שער ראשי/אחורי, שער משנה ועמוד ריק כהחרגות `explicit-special-page-role` כאשר אין `.page-body-flow`. מבנים לא מוכרים נשארים `NOT EVALUATED`; נוסף gate קשיח לכיסוי ולראיות החרגה.
+- gate סוף-החלק מוודא בנפרד את ממצא default `pageIdx=589`, תווית `תקפח`, פער 177px עד `body-flow-bottom`; ההחרגה ב-`pageIdx=590` אינה נחשבת פתרון לממצא הסמוך.
+- סטטוס בעת כתיבת הרשומה: שינויים מקובצים ל-commit ב-V23 בלבד; נדרשת ריצת CI מלאה ובדיקת PDF חדש לפני הכרזה על הצלחה. עמוד 376 מושהה; אין מיזוג ל-V21.
