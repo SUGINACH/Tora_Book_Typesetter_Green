@@ -1,4 +1,10 @@
 {
   "mode-h1": "sub_shaar",
+  "show-main-shaar": false,
+  "show-back-shaar": false,
+  "enable-general-toc": false,
+  "enable-detailed-toc": false,
+  "show-sub-shaar": true,
+  "sub-shaar-count-numbering": true,
   "balance-chapter-end": "fill"
 }
