@@ -3709,3 +3709,11 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - `auditSparsePage` מסווג עמודי שער ראשי/אחורי, שער משנה ועמוד ריק כהחרגות `explicit-special-page-role` כאשר אין `.page-body-flow`. מבנים לא מוכרים נשארים `NOT EVALUATED`; נוסף gate קשיח לכיסוי ולראיות החרגה.
 - gate סוף-החלק מוודא בנפרד את ממצא default `pageIdx=589`, תווית `תקפח`, פער 177px עד `body-flow-bottom`; ההחרגה ב-`pageIdx=590` אינה נחשבת פתרון לממצא הסמוך.
 - סטטוס בעת כתיבת הרשומה: שינויים מקובצים ל-commit ב-V23 בלבד; נדרשת ריצת CI מלאה ובדיקת PDF חדש לפני הכרזה על הצלחה. עמוד 376 מושהה; אין מיזוג ל-V21.
+
+
+## 2026-10-27 — תיקון fixture לגבול סוף-חלק מפורש (V23)
+
+- ריצת CLI #40539561122 נכשלה בשער `Assert section-end boundary exclusions remain explicit`: fixture `section-end-gap-audit.txt` כלל שתי כותרות 1, אך ה-renderer לא יצר גבול `.sub-shaar-page`; לכן `boundaryPageIndex` נשאר null והעמוד לא הוכח כסיום חלק.
+- תיקון מבודד ב-`tests/fixtures/section-end-fill-settings.json`: הגדרה מפורשת של `mode-h1: sub_shaar` לצד `balance-chapter-end: fill`, כדי שה-fixture יגדיר את מדיניות הכותרת שדרושה ליצירת הגבול בפועל. לא שונתה בדיקת ה-gate, לא הורחבה החרגה, ולא שונה מנוע העימוד.
+- Commit: `b6542bffd960e5fbb4b89baca09c84f3161bd2bb`. בדיקת הצלחה ממתינה לריצת CI; אין להסיק שה-fixture תקין עד שהדוח מוכיח `boundaryPageIndex` ו-`boundaryPageClass=sub-shaar-page` ואת שתי רשומות ההחרגה.
+- V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
