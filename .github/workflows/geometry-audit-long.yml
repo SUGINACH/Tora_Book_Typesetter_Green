@@ -269,7 +269,14 @@ jobs:
               issue.kind === 'container-gap' &&
               (!Number.isFinite(issue.gapPx) || issue.gapPx <= check.warningThresholdPx ||
                !['low', 'medium'].includes(issue.severity) ||
-               !['footnote-area-top', 'body-flow-bottom'].includes(issue.to)));
+               !['footnote-area-top', 'body-flow-bottom'].includes(issue.to) ||
+               !issue.gapContext || issue.gapContext.contextSchemaVersion !== 1 ||
+               !issue.gapContext.lastTextElement ||
+               !Array.isArray(issue.gapContext.lastTextAncestorChain) ||
+               !Array.isArray(issue.gapContext.currentBodyFlowChildren) ||
+               (issue.gapContext.nextPage !== null &&
+                 (typeof issue.gapContext.nextPage !== 'object' ||
+                  !Array.isArray(issue.gapContext.nextPage.bodyFlowChildren)))));
             if (malformed.length) {
               console.error('Malformed container-gap finding:', file, malformed.slice(0, 5));
               process.exit(1);
@@ -279,6 +286,8 @@ jobs:
               coverageComplete: check.coverageComplete,
               warningThresholdPx: check.warningThresholdPx, mediumThresholdPx: check.mediumThresholdPx,
               findingCount: check.findingCount,
+              findingsWithStructuralContext: (report.audit?.issues || []).filter(issue =>
+                issue.kind === 'container-gap' && issue.gapContext?.contextSchemaVersion === 1).length,
               pagesExcluded: check.pagesExcluded, excludedReasons: check.excludedReasons,
               excludedPageSamples: excludedPages.slice(0, 25),
               notEvaluatedPageSamples: notEvaluatedPages.slice(0, 25).map(page => ({
