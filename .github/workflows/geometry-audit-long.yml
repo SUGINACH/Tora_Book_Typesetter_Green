@@ -219,23 +219,40 @@ jobs:
               : 0;
             const notEvaluatedPages = check?.notEvaluatedPages;
             const excludedPages = check?.excludedPages;
+            const validExclusionRecord = page => {
+              if (!page || !Number.isInteger(page.pageIdx) || typeof page.reason !== 'string') return false;
+              if (page.reason === 'explicit-special-page-role') {
+                return typeof page.specialPageType === 'string' &&
+                  typeof page.pageClass === 'string' &&
+                  page.boundaryPageClass == null;
+              }
+              if (page.reason === 'section-end-before-divider') {
+                return page.specialPageType === 'section-divider-page' &&
+                  page.pageClass == null &&
+                  typeof page.boundaryPageClass === 'string' &&
+                  page.boundaryPageClass.split(/\\s+/).includes('sub-shaar-page');
+              }
+              if (page.reason === 'chapter-end' || page.reason === 'document-end') {
+                return page.specialPageType == null &&
+                  page.pageClass == null &&
+                  page.boundaryPageClass == null;
+              }
+              return false;
+            };
             if (!check || !Array.isArray(excludedPages) ||
                 excludedPages.length !== check.pagesExcluded ||
-                excludedPages.some(page =>
-                  !Number.isInteger(page.pageIdx) ||
-                  typeof page.reason !== 'string' ||
-                  (page.reason === 'explicit-special-page-role'
-                    ? typeof page.specialPageType !== 'string' || typeof page.pageClass !== 'string'
-                    : page.specialPageType != null || page.pageClass != null))) {
+                excludedPages.some(page => !validExclusionRecord(page))) {
               console.error('Page exclusion records are missing, malformed, or inconsistent with their reason:', file, {
                 pagesExcluded: check?.pagesExcluded,
                 excludedPages: Array.isArray(excludedPages) ? excludedPages.length : null,
-                malformedSamples: Array.isArray(excludedPages) ? excludedPages.filter(page =>
-                  !Number.isInteger(page.pageIdx) ||
-                  typeof page.reason !== 'string' ||
-                  (page.reason === 'explicit-special-page-role'
-                    ? typeof page.specialPageType !== 'string' || typeof page.pageClass !== 'string'
-                    : page.specialPageType != null || page.pageClass != null)).slice(0, 10) : null
+                malformedSamples: Array.isArray(excludedPages)
+                  ? excludedPages.filter(page => !validExclusionRecord(page)).slice(0, 10)
+                  : null,
+                contract: {
+                  explicitSpecialRole: 'specialPageType + pageClass; no boundaryPageClass',
+                  sectionEndBeforeDivider: 'section-divider-page + boundaryPageClass containing sub-shaar-page',
+                  chapterOrDocumentEnd: 'no special-page metadata'
+                }
               });
               process.exit(1);
             }
