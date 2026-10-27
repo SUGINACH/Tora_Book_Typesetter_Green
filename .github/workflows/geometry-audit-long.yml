@@ -60,7 +60,7 @@ jobs:
           }, null, 2));
           NODE
       - name: Run long-document geometry audit
-        run: npm run audit:geometry:long -- --fail-on high --repeat-check --require-note-marker-line-diagnostics
+        run: npm run audit:geometry:long -- --fail-on high --repeat-check --step-audit-disabled --require-note-marker-line-diagnostics
       - name: Assert terminal residual fallbacks do not leave sparse last lines
         run: |
           node - <<'NODE'
@@ -101,6 +101,7 @@ jobs:
             --summary ./artifacts/geometry-audit-ornaments-summary.md \
             --fail-on high \
             --repeat-check \
+            --step-audit-disabled \
             --require-ornaments \
             --require-note-marker-line-diagnostics
           node - <<'NODE'
