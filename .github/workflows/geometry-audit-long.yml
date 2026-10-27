@@ -230,7 +230,7 @@ jobs:
                 return page.specialPageType === 'section-divider-page' &&
                   page.pageClass == null &&
                   typeof page.boundaryPageClass === 'string' &&
-                  page.boundaryPageClass.split(/\\s+/).includes('sub-shaar-page');
+                  page.boundaryPageClass.includes('sub-shaar-page');
               }
               if (page.reason === 'chapter-end' || page.reason === 'document-end') {
                 return page.specialPageType == null &&
