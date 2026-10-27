@@ -3914,7 +3914,8 @@ window.addEventListener('beforeprint', () => { if (settingsDirty) typesetDocumen
         Object.defineProperty(wrapped,'__stepByStepAuditWrapped',{value:true});return wrapped;}
     if(!config.enabled)return;
     createPageLayout=wrap('createPageLayout',createPageLayout);
-    renderSingleItemFast=wrap('renderSingleItemFast',renderSingleItemFast);
+    // renderSingleItemFast is a private helper nested inside balanceColumns; it is not in this IIFE's lexical scope.
+    // Instrument its owning public stage (balanceColumns) rather than referencing an unavailable binding here.
     balanceColumns=wrap('balanceColumns',balanceColumns,true);
     justifyColumnVertically=wrap('justifyColumnVertically',justifyColumnVertically,true);
     shrinkColumnVertically=wrap('shrinkColumnVertically',shrinkColumnVertically,true);

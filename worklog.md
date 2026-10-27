@@ -1,3 +1,14 @@
+## 2026-10-27 — Fix step-audit installation referencing a private nested helper (V23)
+
+- Reviewed completed runs [CLI 40424657295](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40424657295), [full document 40424657248](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40424657248), and [Pages build 40424656669](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40424656669) on commit `816b554f9b6e6289dca8d69fe7fcc6d188c8565d`. Pages build passed; CLI and full-document audit both exited 2 because the browser reported `ReferenceError: renderSingleItemFast is not defined` at `installStepByStepAudit` in `typesetter.js:3917`.
+- Source inspection confirmed `renderSingleItemFast` is declared locally inside `balanceColumns`, while `installStepByStepAudit` is a separate top-level IIFE. The audit installer cannot access that private lexical binding. The failed reference occurred during instrumentation installation, not in the helper's actual candidate-rendering calls.
+- Removed only the invalid attempt to wrap the inaccessible nested helper. Kept instrumentation on the owning `balanceColumns` stage and the other accessible layout stages. Added a comment documenting the lexical-scope constraint. No pagination, candidate scoring, column geometry, CSS, thresholds, or finding severity changed.
+- Existing run evidence (not a clean pass): long document produced 639 pages; decision ledger 858/858 DOM blocks with parity PASS; determinism PASS; note-marker line diagnostics PASS; 40 findings remained visible (12 medium, 28 low: 13 container-gap, 9 imbalance, 6 containment-rounding, 6 structural-fallback, 3 sparse-page, 3 square-bracket-scope). Browser runtime error forced exit 2 and downstream workflow gates were skipped. Smoke: 6 pages, 3 findings; runtime error also forced exit 2 and skipped targeted regression fixtures.
+- Next: verify syntax and rerun CLI smoke plus the canonical `very_long_test_text.txt` audit. Do not claim success until the runtime error is absent and all downstream assertions execute. Then triage remaining geometry findings by record/page and preserve all findings unless a specific rule is evidence-backed.
+- Branch separation preserved: V23 only; no V21 changes or merges.
+
+---
+
 ## 2026-10-27 — Diagnose renderer readiness timeout before changing layout behavior (V23)
 
 - Reviewed failed CLI run [40420451902](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40420451902) and its job log. Syntax and `--help` pass; the first smoke render fails at the renderer readiness `page.waitForFunction` after 30 seconds, before settings initialization or typesetting. Later smoke assertions are skipped and no smoke report is produced. Therefore this run provides no evidence about step-trace correctness or final layout.
