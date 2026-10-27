@@ -643,13 +643,13 @@ function rOverlap(a, b) {
     return dx * dy;
 }
 
-function auditContainment(node, issues) {
+function auditContainment(node, issues, toleratedContainment = []) {
     for (const child of node.children) {
         // Side notes are absolutely positioned anchors. Their height intentionally
         // does not contribute to the margin-column box, so containment against that
         // box is not a valid geometric invariant; audit them against body/page bounds below.
         if (node.type === 'margin-col' && child.type === 'side-note') {
-            auditContainment(child, issues);
+            auditContainment(child, issues, toleratedContainment);
             continue;
         }
         if (!rContains(node, child, TOL.containment)) {
@@ -701,10 +701,47 @@ function auditContainment(node, issues) {
                 note = ' (הערת צד גולשת משטח המרזב)';
             }
 
+            // A tiny upward protrusion of a superscript note marker from a split
+            // paragraph's outer box is tolerated only when the measured overflow is
+            // vertical-top-only and bounded, and the live DOM confirms the marker geometry.
+            // Keep the raw geometry in the audit contract; do not count this known line-box
+            // interaction as a layout issue.
+            const liveNoteMarkerGeometry = kind === 'containment-rounding'
+                ? resolveNoteMarkerInlineGeometry(child.rect)
+                : null;
+            const toleratedNoteMarkerRounding =
+                kind === 'containment-rounding' &&
+                child.type === 'note-marker' &&
+                ['p-cut', 'p-end'].includes(node.type) &&
+                overflow.top > TOL.containment &&
+                overflow.top <= 3 &&
+                overflow.left <= 0.25 &&
+                overflow.right <= 0.25 &&
+                overflow.bottom <= 0.25 &&
+                liveNoteMarkerGeometry?.lookupStatus === 'matched';
+            if (toleratedNoteMarkerRounding) {
+                toleratedContainment.push({
+                    kind: 'tolerated-containment-rounding',
+                    reason: 'superscript-note-marker-top-protrusion-within-tolerance',
+                    pageIdx: getPageIdx(node),
+                    parentType: node.type,
+                    childType: child.type,
+                    location: describePath(node),
+                    overflow,
+                    overflowPx: Math.round(overflowPx * 10) / 10,
+                    tolerancePx: 3,
+                    parentRect: { x: Math.round(node.rect.x), y: Math.round(node.rect.y), w: Math.round(node.rect.w), h: Math.round(node.rect.h), bottom: Math.round(node.rect.bottom) },
+                    childRect: { x: Math.round(child.rect.x), y: Math.round(child.rect.y), w: Math.round(child.rect.w), h: Math.round(child.rect.h), bottom: Math.round(child.rect.bottom) },
+                    inlineGeometry: liveNoteMarkerGeometry
+                });
+                continue;
+            }
+
             issues.push({
                 kind: kind,
                 severity: severity,
                 pageIdx: getPageIdx(node),
+                parentType: node.type,
                 location: describePath(node),
                 childType: child.type,
                 childText: child.text,
@@ -734,7 +771,7 @@ function auditContainment(node, issues) {
                 message: `תיבת ${child.type} בולטת מ-${node.type}: ${JSON.stringify(overflow)}${note}`
             });
         }
-        auditContainment(child, issues);
+        auditContainment(child, issues, toleratedContainment);
     }
 }
 
@@ -2032,6 +2069,7 @@ function auditSquareBracketScopes(issues) {
 /* הפעלת כל הבדיקות */
 function auditGeometry(model) {
     const issues = [];
+    const toleratedContainment = [];
     let sparsePagePagesEvaluated = 0;
     let sparsePagePagesExcluded = 0;
     const sparsePageExcludedReasons = {};
@@ -2050,7 +2088,7 @@ function auditGeometry(model) {
         page.type = 'page';
         // עדכן getPageIdx דרך _parent
         for (const c of page.children) {
-            auditContainment(c, issues);
+            auditContainment(c, issues, toleratedContainment);
             auditSideNoteBounds(c, issues);
             auditSiblingOverlap(c, issues);
             auditColumnBalance(c, issues);
@@ -2158,6 +2196,14 @@ function auditGeometry(model) {
         issues,
         summary,
         checks: {
+            containmentRounding: {
+                version: 1,
+                enabled: true,
+                tolerancePx: 3,
+                toleratedCount: toleratedContainment.length,
+                toleratedRecords: toleratedContainment,
+                findingCount: issues.filter(issue => issue.kind === 'containment-rounding').length
+            },
             sparsePage: {
                 version: 1,
                 enabled: true,

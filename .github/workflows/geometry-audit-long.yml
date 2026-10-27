@@ -155,6 +155,61 @@ jobs:
             dividerHeaderGate: 'PASS'
           }));
           NODE
+      - name: Assert note-marker rounding exceptions are narrow and fully accounted
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const cases = [
+            {file:'./artifacts/geometry-audit.json', expectedPages:[503,601]},
+            {file:'./artifacts/geometry-audit-ornaments.json', expectedPages:[515,529,608]}
+          ];
+          const nearZero = value => Number.isFinite(value) && value >= 0 && value <= 0.25;
+          for (const item of cases) {
+            const report = JSON.parse(fs.readFileSync(item.file,'utf8'));
+            const check = report.audit?.checks?.containmentRounding;
+            const issues = report.audit?.issues || [];
+            const records = check?.toleratedRecords;
+            const validRecord = r => r &&
+              r.kind === 'tolerated-containment-rounding' &&
+              r.reason === 'superscript-note-marker-top-protrusion-within-tolerance' &&
+              Number.isInteger(r.pageIdx) &&
+              ['p-cut','p-end'].includes(r.parentType) &&
+              r.childType === 'note-marker' &&
+              r.overflow && r.overflow.top > 1 && r.overflow.top <= 3 &&
+              nearZero(r.overflow.left) && nearZero(r.overflow.right) &&
+              nearZero(r.overflow.bottom) &&
+              Number.isFinite(r.overflowPx) && r.overflowPx <= 3 &&
+              r.tolerancePx === 3 &&
+              r.inlineGeometry?.lookupStatus === 'matched';
+            const malformed = Array.isArray(records) ? records.filter(r=>!validRecord(r)) : [];
+            const eligibleStillReported = issues.filter(issue =>
+              issue.kind === 'containment-rounding' &&
+              issue.childType === 'note-marker' &&
+              ['p-cut','p-end'].includes(issue.parentType) &&
+              issue.overflow?.top > 1 && issue.overflow?.top <= 3 &&
+              nearZero(issue.overflow?.left) && nearZero(issue.overflow?.right) &&
+              nearZero(issue.overflow?.bottom) &&
+              issue.inlineGeometry?.lookupStatus === 'matched');
+            const missingTargets = item.expectedPages.filter(pageIdx =>
+              !Array.isArray(records) || !records.some(r=>r.pageIdx===pageIdx));
+            if (!check || check.enabled !== true || check.tolerancePx !== 3 ||
+                !Array.isArray(records) || check.toleratedCount !== records.length ||
+                check.findingCount !== issues.filter(issue=>issue.kind==='containment-rounding').length ||
+                malformed.length || eligibleStillReported.length || missingTargets.length) {
+              console.error('Note-marker tolerance contract failed:', item.file, {
+                check, malformed: malformed.slice(0,10), eligibleStillReported,
+                missingTargets
+              });
+              process.exit(1);
+            }
+            console.log(JSON.stringify({
+              file:item.file, toleratedCount:check.toleratedCount,
+              remainingContainmentRoundingFindings:check.findingCount,
+              verifiedTargetPages:item.expectedPages,
+              narrowToleranceGate:'PASS'
+            }));
+          }
+          NODE
       - name: Build actual rendered-page issue screenshot PDF
         if: always()
         run: |
