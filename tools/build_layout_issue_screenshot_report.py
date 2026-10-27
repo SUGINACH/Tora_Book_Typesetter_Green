@@ -64,7 +64,8 @@ def main():
       Paragraph("Review aid only: a finding is not automatically a confirmed defect, and screenshots alone do not prove causality or resolution.",styles["Disclaimer"]),
       Paragraph("Source runs: "+esc(", ".join(str(m.get("runId") or "local")+"/"+str(m.get("configuration")) for m in manifests)),styles["SubTitle"]),
       Paragraph("Deferred investigation: DOM page indexes 375 and 376 were deliberately excluded.",styles["SubTitle"]),
-      Spacer(1,8)
+      Spacer(1,8),
+      PageBreak()
     ]
     pdf_rows=[]
     for pdf_page,row in enumerate(rows,start=2):

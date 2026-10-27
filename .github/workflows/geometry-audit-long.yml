@@ -65,15 +65,6 @@ jobs:
           NODE
       - name: Run long-document geometry audit
         run: npm run audit:geometry:long -- --fail-on high --repeat-check --step-audit-disabled --require-note-marker-line-diagnostics --screenshots-dir ./artifacts/issue-screenshots/default --screenshot-label default
-      - name: Build actual rendered-page issue screenshot PDF
-        if: always()
-        run: |
-          python -m pip install --disable-pip-version-check reportlab
-          python tools/build_layout_issue_screenshot_report.py \
-            --manifest artifacts/issue-screenshots/default/manifest.json \
-            --manifest artifacts/issue-screenshots/ornaments/manifest.json \
-            --output artifacts/layout-issue-screenshot-report.pdf \
-            --combined-manifest artifacts/layout-issue-screenshot-manifest.json
       - name: Assert step-audit suppression is explicit in default full-document report
         run: |
           node - <<'NODE'
@@ -162,6 +153,15 @@ jobs:
             dividerHeaderGate: 'PASS'
           }));
           NODE
+      - name: Build actual rendered-page issue screenshot PDF
+        if: always()
+        run: |
+          python -m pip install --disable-pip-version-check reportlab
+          python tools/build_layout_issue_screenshot_report.py \
+            --manifest artifacts/issue-screenshots/default/manifest.json \
+            --manifest artifacts/issue-screenshots/ornaments/manifest.json \
+            --output artifacts/layout-issue-screenshot-report.pdf \
+            --combined-manifest artifacts/layout-issue-screenshot-manifest.json
       - name: Assert step-audit suppression is explicit in ornament full-document report
         run: |
           node - <<'NODE'
