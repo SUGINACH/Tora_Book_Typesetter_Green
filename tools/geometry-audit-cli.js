@@ -1795,16 +1795,28 @@ async function main() {
         const integrityFailures = instrumentationIntegrityFailures(report);
         const noteMarkerLineIssues = report.audit.issues.filter(issue =>
             issue.kind === 'containment-rounding' && issue.childType === 'note-marker');
+        // Expected/tolerated rounding records still carry live-DOM line geometry. They
+        // are diagnostic evidence, not issues, so the coverage gate must include them.
+        const toleratedNoteMarkerRecords = report.audit.checks?.containmentRounding?.toleratedRecords || [];
+        const noteMarkerLineGeometry = [
+            ...noteMarkerLineIssues.map(issue => issue.inlineGeometry),
+            ...toleratedNoteMarkerRecords
+                .filter(record => record.childType === 'note-marker')
+                .map(record => record.inlineGeometry)
+        ];
         const noteMarkerLineDiagnosticsMissing = args.requireNoteMarkerLineDiagnostics
-            ? (!noteMarkerLineIssues.length || noteMarkerLineIssues.some(issue =>
-                !issue.inlineGeometry || issue.inlineGeometry.lookupStatus !== 'matched' ||
-                !issue.inlineGeometry.nearestLine || !Number.isFinite(issue.inlineGeometry.nearestLine.centerDistance)))
+            ? (!noteMarkerLineGeometry.length || noteMarkerLineGeometry.some(geometry =>
+                !geometry || geometry.lookupStatus !== 'matched' ||
+                !geometry.nearestLine || !Number.isFinite(geometry.nearestLine.centerDistance)))
             : false;
+        const missingNoteMarkerLineGeometry = noteMarkerLineGeometry.filter(geometry =>
+            !geometry?.nearestLine || !Number.isFinite(geometry.nearestLine.centerDistance)).length;
         process.stdout.write('Note-marker line diagnostics: ' +
             (noteMarkerLineDiagnosticsMissing
-                ? 'FAIL (' + noteMarkerLineIssues.filter(issue => !issue.inlineGeometry?.nearestLine).length +
-                  '/' + noteMarkerLineIssues.length + ' missing; required=' + args.requireNoteMarkerLineDiagnostics + ')'
-                : 'PASS (' + noteMarkerLineIssues.length + ' containment-rounding marker findings; required=' +
+                ? 'FAIL (' + missingNoteMarkerLineGeometry + '/' + noteMarkerLineGeometry.length +
+                  ' missing; required=' + args.requireNoteMarkerLineDiagnostics + ')'
+                : 'PASS (' + noteMarkerLineIssues.length + ' issue markers + ' +
+                  toleratedNoteMarkerRecords.length + ' tolerated marker records; required=' +
                   args.requireNoteMarkerLineDiagnostics + ')') + '\n');
         process.stdout.write('Audit instrumentation integrity: ' +
             (integrityFailures.length ? 'FAIL (' + integrityFailures.join('; ') + ')' : 'PASS') + '\n');
