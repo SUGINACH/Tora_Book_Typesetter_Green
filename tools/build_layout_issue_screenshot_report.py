@@ -37,7 +37,8 @@ def main():
     manifests=[]
     for name in args.manifest:
         path=ROOT/name
-        if not path.is_file(): continue
+        if not path.is_file():
+            raise SystemExit(f"Required screenshot manifest missing: {path}")
         data=json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(data.get("screenshots"),list): raise SystemExit(f"Invalid screenshot manifest: {path}")
         data["_manifestPath"]=str(path.relative_to(ROOT))
