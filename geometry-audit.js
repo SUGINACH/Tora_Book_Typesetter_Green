@@ -1788,16 +1788,28 @@ function auditSparsePage(page, issues) {
 
     const heading2Selector = '.title-level-2-standalone';
     const nextPage = pageIndex >= 0 ? pageEls[pageIndex + 1] : null;
-    const nextHeading2 = nextPage?.querySelector(heading2Selector);
-    const nextFlow = nextPage?.querySelector('.page-body-flow');
-    const nextFlowRect = nextFlow?.getBoundingClientRect();
-    const nextHeadingRect = nextHeading2?.getBoundingClientRect();
+
+    // Chapter boundaries are structural, not ornament-dependent. H2 is a forced
+    // page-start in this engine; decorative spacing above it can move its DOM box
+    // below a fixed percentage threshold, so do not infer the boundary from Y alone.
+    // Also look through one explicitly blank page: chapter-end pages may be followed
+    // by a deliberate verso/recto blank before the next chapter begins.
+    const nextIsIntentionalBlank = !!nextPage?.classList.contains('blank-page');
+    const chapterStartPage = nextIsIntentionalBlank && pageIndex >= 0
+        ? pageEls[pageIndex + 2]
+        : nextPage;
+    const chapterStartFlow = chapterStartPage?.querySelector('.page-body-flow');
+    const chapterStartHeading = chapterStartPage?.querySelector(heading2Selector);
+    const chapterStartFlowRect = chapterStartFlow?.getBoundingClientRect();
+    const chapterStartHeadingRect = chapterStartHeading?.getBoundingClientRect();
     const nextPageStartsChapter = !!(
-        nextHeadingRect && nextFlowRect && nextFlowRect.height > 0 &&
-        nextHeadingRect.top < nextFlowRect.top + nextFlowRect.height * 0.45
+        chapterStartHeadingRect && chapterStartFlowRect && chapterStartFlowRect.height > 0 &&
+        chapterStartHeadingRect.bottom > chapterStartFlowRect.top &&
+        chapterStartHeadingRect.top < chapterStartFlowRect.bottom
     );
 
-    // סוף פרק: כותרת 2 בראש העמוד הבא מעידה שהעמוד הנוכחי מסתיים לפני פרק חדש.
+    // A page immediately preceding the next chapter is an intentional chapter-end
+    // page; sparse-page is not an error there, irrespective of balance/fill policy.
     if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
 
     // Chapter-end sparsity depends on the explicit balance/fill policy.
