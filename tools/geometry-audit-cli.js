@@ -13,7 +13,7 @@ const crypto = require('node:crypto');
 function parseArgs(argv) {
     const o = { input: null, settings: null, report: './artifacts/geometry-audit.json',
         summary: './artifacts/geometry-audit-summary.md', fullModel: false, failOn: 'high',
-        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, stepAuditMaxEvents:4000, stepAuditMaxElements:1200, stepAuditTextChars:180, stepAuditNoLineRects:false, stepAuditNoComputedStyle:false, stepAuditDisabled:false, stepAuditPageIndexes:null, help: false };
+        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, stepAuditMaxEvents:4000, stepAuditMaxElements:1200, stepAuditTextChars:180, stepAuditNoLineRects:false, stepAuditNoComputedStyle:false, stepAuditDisabled:false, stepAuditPageIndexes:null, screenshotsDir:null, screenshotLabel:'render', screenshotMaxPerKind:3, help: false };
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         const take = () => { if (i + 1 >= argv.length) throw new Error('Missing value for ' + arg); return argv[++i]; };
@@ -22,6 +22,9 @@ function parseArgs(argv) {
             case '--settings': o.settings = take(); break;
             case '--report': o.report = take(); break;
             case '--summary': o.summary = take(); break;
+            case '--screenshots-dir': o.screenshotsDir = take(); break;
+            case '--screenshot-label': o.screenshotLabel = take(); break;
+            case '--screenshot-max-per-kind': o.screenshotMaxPerKind = Number(take()); break;
             case '--full-model': o.fullModel = true; break;
             case '--repeat-check': o.repeatCheck = true; break;
             case '--require-ornaments': o.requireOrnaments = true; break;
@@ -52,6 +55,8 @@ function parseArgs(argv) {
     if (!['high', 'medium', 'low', 'none'].includes(o.failOn)) throw new Error('--fail-on must be high, medium, low, or none');
     if (o.stepAuditPageIndexes && (!o.stepAuditPageIndexes.length || o.stepAuditPageIndexes.some(n => !Number.isSafeInteger(n) || n < 0))) throw new Error('--step-audit-page-indexes must contain zero-based nonnegative safe integers');
     if (o.stepAuditDisabled && o.stepAuditPageIndexes) throw new Error('--step-audit-page-indexes cannot be combined with --step-audit-disabled');
+    if (!/^[a-z0-9_-]+$/i.test(o.screenshotLabel)) throw new Error('--screenshot-label may contain only letters, numbers, underscore and hyphen');
+    if (!Number.isSafeInteger(o.screenshotMaxPerKind) || o.screenshotMaxPerKind < 1 || o.screenshotMaxPerKind > 10) throw new Error('--screenshot-max-per-kind must be an integer from 1 to 10');
     return o;
 }
 function help() {
@@ -59,10 +64,90 @@ function help() {
       'Options: --settings <json-file>, --report <json-file>, --summary <md-file>, --full-model, --repeat-check,\n' +
       '--fail-on <high|medium|low|none>, --timeout-ms <number>, --viewport-width <number>, --viewport-height <number>, --require-ornaments, --require-geometry-features, --require-note-marker-line-diagnostics,\n' +
       '--test-empty-column-balance, --test-missing-column-element (regression tests only),\n' +
-      '--step-audit-max-events <n>, --step-audit-max-elements <n>, --step-audit-text-chars <n>, --step-audit-page-indexes <i,j,...> (targeted causal trace), --step-audit-no-line-rects, --step-audit-no-computed-style, --step-audit-disabled\n');
+      '--step-audit-max-events <n>, --step-audit-max-elements <n>, --step-audit-text-chars <n>, --step-audit-page-indexes <i,j,...> (targeted causal trace), --step-audit-no-line-rects, --step-audit-no-computed-style, --step-audit-disabled,\n' +
+      '--screenshots-dir <dir>, --screenshot-label <label>, --screenshot-max-per-kind <1..10> (real rendered issue-page captures; excludes deferred indexes 375/376)\n');
 }
 function abs(p) { return path.resolve(process.cwd(), p); }
 function ensureParent(p) { fs.mkdirSync(path.dirname(p), { recursive: true }); }
+
+function screenshotIssueSummary(issue) {
+    const out = {};
+    for (const key of ['kind','severity','pageIdx','pageLabel','message','gapPx','diff','overflowPx','childType','location','from','to','balanceOutcome','balanceDiagnosis','fillRatio','reason']) {
+        if (issue && issue[key] !== undefined) out[key] = issue[key];
+    }
+    return out;
+}
+async function captureIssueScreenshots(page, data, args) {
+    if (!args.screenshotsDir) return null;
+    const outDir = abs(args.screenshotsDir);
+    fs.mkdirSync(outDir, { recursive: true });
+    const domPageCount = await page.locator('#book-container .a4-page').count();
+    if (!Number.isInteger(data.pageCount) || domPageCount !== data.pageCount) {
+        throw new Error('Issue screenshot capture refused: DOM/model page count mismatch: DOM=' + domPageCount + ', model=' + data.pageCount);
+    }
+    const allIssues = Array.isArray(data.issues) ? data.issues : [];
+    const deferredPageIndexes = new Set([375, 376]);
+    const byKind = new Map();
+    for (const issue of allIssues) {
+        if (!issue || typeof issue.kind !== 'string' || !Number.isInteger(issue.pageIdx) ||
+            issue.pageIdx < 0 || issue.pageIdx >= domPageCount || deferredPageIndexes.has(issue.pageIdx)) continue;
+        if (!byKind.has(issue.kind)) byKind.set(issue.kind, new Map());
+        const byPage = byKind.get(issue.kind);
+        if (!byPage.has(issue.pageIdx)) byPage.set(issue.pageIdx, []);
+        byPage.get(issue.pageIdx).push(issue);
+    }
+    const severityRank = { high: 3, medium: 2, low: 1 };
+    const magnitude = issue => Math.max(0, ...[issue.gapPx, issue.diff, issue.overflowPx]
+        .filter(Number.isFinite).map(Math.abs));
+    const selected = new Map();
+    for (const [kind, byPage] of byKind) {
+        const rows = [...byPage.entries()].map(([pageIdx, issues]) => ({
+            pageIdx, severity: Math.max(...issues.map(x => severityRank[String(x.severity || '').toLowerCase()] || 0)),
+            magnitude: Math.max(0, ...issues.map(magnitude))
+        })).sort((a,b) => b.severity-a.severity || b.magnitude-a.magnitude || a.pageIdx-b.pageIdx);
+        for (const row of rows.slice(0, args.screenshotMaxPerKind)) {
+            if (!selected.has(row.pageIdx)) selected.set(row.pageIdx, new Set());
+            selected.get(row.pageIdx).add(kind);
+        }
+    }
+    if (!selected.size) throw new Error('No page-specific issues available for screenshots outside deferred indexes 375/376.');
+    const screenshots = [];
+    for (const [pageIdx, kindSet] of [...selected.entries()].sort((a,b)=>a[0]-b[0])) {
+        const kinds = [...kindSet].sort();
+        const filename = args.screenshotLabel + '__page-index-' + pageIdx + '__' +
+            kinds.map(k=>k.replace(/[^a-z0-9_-]/gi,'-')).join('_') + '.png';
+        const absolutePath = path.join(outDir, filename);
+        await page.locator('#book-container .a4-page').nth(pageIdx).screenshot({
+            path: absolutePath, animations: 'disabled', timeout: Math.max(30000, args.timeoutMs)
+        });
+        const selectedIssues = allIssues.filter(x=>x && x.pageIdx===pageIdx && kindSet.has(x.kind));
+        screenshots.push({
+            screenshotFile: filename,
+            screenshotPath: path.relative(root, absolutePath).split(path.sep).join('/'),
+            configuration: args.screenshotLabel,
+            domPageIndex: pageIdx,
+            sourcePageLabel: selectedIssues.find(x=>x.pageLabel!=null)?.pageLabel ?? null,
+            selectedIssueKinds: kinds,
+            issues: selectedIssues.map(screenshotIssueSummary)
+        });
+    }
+    const manifest = {
+        schemaVersion: 1, capturedAt: new Date().toISOString(),
+        repository: process.env.GITHUB_REPOSITORY || null, ref: process.env.GITHUB_REF || null,
+        gitCommit: process.env.GITHUB_SHA || null, runId: process.env.GITHUB_RUN_ID || null,
+        configuration: args.screenshotLabel, pageCount: data.pageCount, domPageCount,
+        maxPagesPerIssueKind: args.screenshotMaxPerKind,
+        deferredPageIndexesNotCaptured: [...deferredPageIndexes],
+        issueKindsInAudit: [...new Set(allIssues.map(x=>x.kind).filter(Boolean))].sort(),
+        screenshotCount: screenshots.length, screenshots
+    };
+    fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
+    process.stdout.write('Rendered issue screenshots: ' + screenshots.length + '; configuration=' + args.screenshotLabel + '; deferred indexes omitted=375,376\\n');
+    return { configuration: args.screenshotLabel, screenshotCount: screenshots.length,
+        manifestPath: path.relative(root, path.join(outDir,'manifest.json')).split(path.sep).join('/'),
+        issueKinds: manifest.issueKindsInAudit };
+}
+
 function mime(p) {
     const ext = path.extname(p).toLowerCase();
     return ({ '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8',
@@ -1412,6 +1497,7 @@ async function main() {
                 bookContainerScrollHeight:document.getElementById('book-container')?.scrollHeight ?? null
             };
         }, { includeFullModel: args.fullModel, testEmptyColumnBalance: args.testEmptyColumnBalance, testMissingColumnElement: args.testMissingColumnElement });
+        const issueScreenshotCapture = await captureIssueScreenshots(page, data, args);
 
         const allIssues = Array.isArray(data.issues) ? data.issues : [];
         const traceLinksByIssueIndex = new Map((data.stageByStepAudit?.issueLinks || []).map(link => [link.issueIndex, link]));
@@ -1646,7 +1732,7 @@ async function main() {
             run:{ input:path.relative(root,inputPath).split(path.sep).join('/'), inputBytes:Buffer.byteLength(inputText,'utf8'),
               generatedAt:new Date().toISOString(), branch:process.env.GITHUB_REF_NAME || null,
               gitCommit:process.env.GITHUB_SHA || null, viewport:{width:args.viewportWidth,height:args.viewportHeight,deviceScaleFactor:1},
-              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, stepAudit:{enabled:!args.stepAuditDisabled, disabledByRequest:args.stepAuditDisabled, disableReason:args.stepAuditDisabled?'full-document-stability-policy':null, maxEvents:args.stepAuditMaxEvents, maxElements:args.stepAuditMaxElements, textChars:args.stepAuditTextChars, includeLineRects:!args.stepAuditNoLineRects, includeComputedStyle:!args.stepAuditNoComputedStyle, targetPageIndexes:args.stepAuditPageIndexes}, browser:'Chromium headless' },
+              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, issueScreenshotCapture, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, stepAudit:{enabled:!args.stepAuditDisabled, disabledByRequest:args.stepAuditDisabled, disableReason:args.stepAuditDisabled?'full-document-stability-policy':null, maxEvents:args.stepAuditMaxEvents, maxElements:args.stepAuditMaxElements, textChars:args.stepAuditTextChars, includeLineRects:!args.stepAuditNoLineRects, includeComputedStyle:!args.stepAuditNoComputedStyle, targetPageIndexes:args.stepAuditPageIndexes}, browser:'Chromium headless' },
             pageCount:data.pageCount,
             geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,stepByStepAudit:data.stageByStepAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
             audit:{summary:data.summary,issues:data.issues,checks:data.checks},

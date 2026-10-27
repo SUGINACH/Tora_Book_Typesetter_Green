@@ -1,5 +1,8 @@
 name: Geometry audit long document
 
+permissions:
+  contents: write
+
 concurrency:
   group: geometry-audit-long-${{ github.ref }}
   cancel-in-progress: true
@@ -17,6 +20,7 @@ on:
       - 'geometry-audit.js'
       - 'renderer-bridge.js'
       - 'tools/geometry-audit-cli.js'
+      - 'tools/build_layout_issue_screenshot_report.py'
       - 'very_long_test_text.txt'
       - 'package.json'
       - '.github/workflows/geometry-audit-long.yml'
@@ -60,7 +64,16 @@ jobs:
           }, null, 2));
           NODE
       - name: Run long-document geometry audit
-        run: npm run audit:geometry:long -- --fail-on high --repeat-check --step-audit-disabled --require-note-marker-line-diagnostics
+        run: npm run audit:geometry:long -- --fail-on high --repeat-check --step-audit-disabled --require-note-marker-line-diagnostics --screenshots-dir ./artifacts/issue-screenshots/default --screenshot-label default
+      - name: Build actual rendered-page issue screenshot PDF
+        if: always()
+        run: |
+          python -m pip install --disable-pip-version-check reportlab
+          python tools/build_layout_issue_screenshot_report.py \
+            --manifest artifacts/issue-screenshots/default/manifest.json \
+            --manifest artifacts/issue-screenshots/ornaments/manifest.json \
+            --output artifacts/layout-issue-screenshot-report.pdf \
+            --combined-manifest artifacts/layout-issue-screenshot-manifest.json
       - name: Assert step-audit suppression is explicit in default full-document report
         run: |
           node - <<'NODE'
@@ -127,7 +140,9 @@ jobs:
             --repeat-check \
             --step-audit-disabled \
             --require-ornaments \
-            --require-note-marker-line-diagnostics
+            --require-note-marker-line-diagnostics \
+            --screenshots-dir ./artifacts/issue-screenshots/ornaments \
+            --screenshot-label ornaments
           node - <<'NODE'
           const fs = require('node:fs');
           const report = JSON.parse(fs.readFileSync('./artifacts/geometry-audit-ornaments.json', 'utf8'));
@@ -422,6 +437,39 @@ jobs:
             targetedTraceGate: 'PASS'
           }));
           NODE
+      - name: Archive rendered issue screenshot PDF in V23
+        if: always() && hashFiles('artifacts/layout-issue-screenshot-report.pdf', 'artifacts/layout-issue-screenshot-manifest.json') != ''
+        run: |
+          set -euo pipefail
+          ISSUE_KINDS="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('artifacts/layout-issue-screenshot-manifest.json').read_text(encoding='utf-8'))
+          print('_'.join(k.replace('/', '-') for k in data.get('issueKinds', [])) or 'no-classified-issues')
+          PY
+          )"
+          REPORT_DIR="V23/reports/${ISSUE_KINDS}_$(date -u +%F)_run-${GITHUB_RUN_ID}"
+          mkdir -p "$REPORT_DIR"
+          cp artifacts/layout-issue-screenshot-report.pdf "$REPORT_DIR/layout-issue-screenshot-report.pdf"
+          cp artifacts/layout-issue-screenshot-manifest.json "$REPORT_DIR/layout-issue-screenshot-manifest.json"
+          cat > "$REPORT_DIR/README.md" <<EOF
+          # Rendered layout-issue screenshots
+
+          - Source repository/ref/commit/run are recorded in the JSON manifest.
+          - The PDF embeds genuine screenshots captured from rendered `.a4-page` DOM elements in Chromium; it does not use diagrams or reconstructed page images.
+          - The report selects up to three distinct pages per issue kind and excludes deferred DOM page indexes 375 and 376.
+          - The JSON manifest maps each PDF page to its source screenshot, measured issue data, configuration, commit and run.
+          - This is a diagnostic review report, not a claim that every finding is confirmed or resolved.
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$REPORT_DIR"
+          if git diff --cached --quiet; then
+            echo "No screenshot report changes to commit."
+            exit 0
+          fi
+          git commit -m "V23: archive rendered layout issue screenshots"
+          git push origin "HEAD:V23"
       - name: Upload long-document audit report
         if: always()
         uses: actions/upload-artifact@v4
@@ -435,4 +483,7 @@ jobs:
             artifacts/geometry-audit-targeted-trace.json
             artifacts/geometry-audit-targeted-trace-summary.md
             artifacts/run-fingerprint.json
+            artifacts/issue-screenshots/
+            artifacts/layout-issue-screenshot-report.pdf
+            artifacts/layout-issue-screenshot-manifest.json
           if-no-files-found: warn
