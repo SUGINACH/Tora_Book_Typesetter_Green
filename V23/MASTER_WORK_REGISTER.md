@@ -1,3 +1,11 @@
+## עדכון 2026-10-27 — חוזה gapContext והצעד הבא לשקיפות סיבתית
+
+- בריצה [40456440662](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40456440662), commit `b954f0e091b681e624d1cd6f9deb455eaa32c840`, שלב 15 נכשל משום ש-`lastTextElement` לא הכיל `computedLayout` מקונן, אף שהסגנון המחושב נשמר בשדה האחות `lastTextComputedLayout`. זו אי-התאמה בסכמת האימות/הדוח, לא הוכחה לכשל פריסה.
+- בדיקת CLI [40456440742](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40456440742) עברה על אותו commit, אך אינה מחליפה את שער המסמך המלא.
+- commit `6488802b8528a3d9474237c5848ccad28a669196` מוסיף את `computedLayout` לתוך `gapContext.lastTextElement` ומשאיר את השדה הישן לתאימות. ריצות האימות על commit זה עדיין הוצגו כ-`in_progress` בעת הבדיקה: [CLI 40457490565](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40457490565), [מסמך מלא 40457490583](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40457490583). אין לסגור את הסעיף לפני תוצאה סופית.
+- דרישת ההמשך: לאחר מעבר שער הסכמה, להריץ Step Audit ממוקד על ממצא מייצג. דוח המסמך המלא הנוכחי מבטל Step Audit במכוון ליציבות Chromium, ולכן הוא מספק הקשר מבני עשיר אך לא היסטוריית אירועים סיבתית. יש לוודא trace שלם (ללא אירועים שנפלו), לזהות אירועי שינוי רלוונטיים, ולהציג סיבה מוכחת או במפורש "לא הוכרע"; אין להציג חלון מועמד כסיבתיות מוכחת.
+- אין שינוי באלגוריתם העימוד או בספי הממצאים. V23 בלבד; אין מיזוג ל-V21.
+
 # מרשם עבודות ראשי — יציבות, שלימות ושקיפות מנוע העימוד (V23)
 
 **מצב:** מסמך תכנון וביקורת; לא בוצע בו שינוי באלגוריתם העימוד.  
