@@ -121,6 +121,37 @@ jobs:
             sparseLineGate: 'PASS'
           }));
           NODE
+      - name: Assert ornament fixture targets body headings, not running headers
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = './tests/fixtures/ornament-geometry-settings.json';
+          const settings = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const headerKeys = [
+            'hdr-r-type', 'hdr-c-type', 'hdr-l-type',
+            'hdr-verso-r-type', 'hdr-verso-c-type', 'hdr-verso-l-type'
+          ];
+          const activeHeaderOrnaments = headerKeys.filter(key =>
+            settings[key] && settings[key] !== 'none' && settings[key] !== 'text');
+          const bodyOrnaments = [
+            'h2-ornament-top-style', 'h2-ornament-bottom-style',
+            'h2-title-ornament-r', 'h3-ornament-r', 'h3-ornament-l'
+          ];
+          const inactiveBodyOrnaments = bodyOrnaments.filter(key =>
+            !settings[key] || settings[key] === 'none');
+          if (activeHeaderOrnaments.length || inactiveBodyOrnaments.length) {
+            console.error('Ornament fixture must exercise body-text headings while disabling running-header ornaments:', {
+              activeHeaderOrnaments: activeHeaderOrnaments.map(key => ({key, value: settings[key]})),
+              inactiveBodyOrnaments: inactiveBodyOrnaments.map(key => ({key, value: settings[key]}))
+            });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            runningHeaderOrnaments: 'disabled',
+            bodyTextOrnamentSettings: Object.fromEntries(bodyOrnaments.map(key => [key, settings[key]])),
+            scopeGate: 'PASS'
+          }));
+          NODE
       - name: Run long-document geometry audit with active ornaments
         run: |
           node tools/geometry-audit-cli.js \
