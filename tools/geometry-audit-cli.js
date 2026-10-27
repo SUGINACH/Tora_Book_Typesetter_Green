@@ -77,7 +77,7 @@ function screenshotIssueSummary(issue) {
     }
     return out;
 }
-async function captureIssueScreenshots(page, data, args) {
+async function captureIssueScreenshots(page, data, args, root) {
     if (!args.screenshotsDir) return null;
     const outDir = abs(args.screenshotsDir);
     fs.mkdirSync(outDir, { recursive: true });
@@ -1497,7 +1497,7 @@ async function main() {
                 bookContainerScrollHeight:document.getElementById('book-container')?.scrollHeight ?? null
             };
         }, { includeFullModel: args.fullModel, testEmptyColumnBalance: args.testEmptyColumnBalance, testMissingColumnElement: args.testMissingColumnElement });
-        const issueScreenshotCapture = await captureIssueScreenshots(page, data, args);
+        const issueScreenshotCapture = await captureIssueScreenshots(page, data, args, root);
 
         const allIssues = Array.isArray(data.issues) ? data.issues : [];
         const traceLinksByIssueIndex = new Map((data.stageByStepAudit?.issueLinks || []).map(link => [link.issueIndex, link]));
