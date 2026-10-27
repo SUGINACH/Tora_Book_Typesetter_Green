@@ -265,28 +265,51 @@ jobs:
               console.error('Container-gap accounting is missing, incomplete, or inconsistent:', file, check);
               process.exit(1);
             }
+            const hasFiniteRect = node => node && [
+              'leftFromFlowPx', 'rightFromFlowPx', 'topFromFlowPx', 'bottomFromFlowPx',
+              'widthPx', 'heightPx'
+            ].every(key => Number.isFinite(node[key])) &&
+              node.widthPx >= 0 && node.heightPx >= 0;
+            const hasComputedLayout = node => node && node.computedLayout &&
+              typeof node.computedLayout.display === 'string' &&
+              typeof node.computedLayout.position === 'string' &&
+              typeof node.computedLayout.boxSizing === 'string' &&
+              typeof node.computedLayout.width === 'string' &&
+              typeof node.computedLayout.height === 'string';
+            const isMeasuredNode = node => hasFiniteRect(node) &&
+              typeof node.tag === 'string' && typeof node.className === 'string' &&
+              hasComputedLayout(node);
+            const isMeasuredColumn = column => isMeasuredNode(column) &&
+              Number.isInteger(column.visibleTextElementCount) &&
+              column.visibleTextElementCount >= 0 &&
+              (column.lastVisibleTextElement === null ||
+               column.lastVisibleTextElement === undefined ||
+               hasFiniteRect(column.lastVisibleTextElement));
+            const isMeasuredChild = node => isMeasuredNode(node) &&
+              Array.isArray(node.columns) &&
+              node.columns.every(isMeasuredColumn) &&
+              (!String(node.className).includes('block-2col') || node.columns.length >= 2);
             const malformed = (report.audit?.issues || []).filter(issue =>
               issue.kind === 'container-gap' &&
               (!Number.isFinite(issue.gapPx) || issue.gapPx <= check.warningThresholdPx ||
                !['low', 'medium'].includes(issue.severity) ||
                !['footnote-area-top', 'body-flow-bottom'].includes(issue.to) ||
                !issue.gapContext || issue.gapContext.contextSchemaVersion !== 2 ||
-               !issue.gapContext.lastTextElement ||
-               !issue.gapContext.bodyFlow ||
-               !issue.gapContext.bodyFlow.computedLayout ||
-               !issue.gapContext.lastTextComputedLayout ||
+               !isMeasuredNode(issue.gapContext.lastTextElement) ||
+               !isMeasuredNode(issue.gapContext.bodyFlow) ||
+               !hasComputedLayout({computedLayout: issue.gapContext.lastTextComputedLayout}) ||
                !Array.isArray(issue.gapContext.lastTextAncestorChain) ||
-               issue.gapContext.lastTextAncestorChain.some(node =>
-                 !Number.isFinite(node.widthPx) || !Number.isFinite(node.heightPx) || !node.computedLayout) ||
+               issue.gapContext.lastTextAncestorChain.length < 1 ||
+               issue.gapContext.lastTextAncestorChain.some(node => !isMeasuredNode(node)) ||
                !Array.isArray(issue.gapContext.currentBodyFlowChildren) ||
-               issue.gapContext.currentBodyFlowChildren.some(node =>
-                 !Number.isFinite(node.widthPx) || !Number.isFinite(node.heightPx) ||
-                 !node.computedLayout || !Array.isArray(node.columns) ||
-                 node.columns.some(column => !Number.isFinite(column.widthPx) ||
-                   !Number.isFinite(column.heightPx) || !column.computedLayout)) ||
+               issue.gapContext.currentBodyFlowChildren.length < 1 ||
+               issue.gapContext.currentBodyFlowChildren.some(node => !isMeasuredChild(node)) ||
                (issue.gapContext.nextPage !== null &&
                  (typeof issue.gapContext.nextPage !== 'object' ||
-                  !Array.isArray(issue.gapContext.nextPage.bodyFlowChildren)))));
+                  typeof issue.gapContext.nextPage.pageClass !== 'string' ||
+                  typeof issue.gapContext.nextPage.hasBodyFlow !== 'boolean' ||
+                  !Array.isArray(issue.gapContext.nextPage.bodyFlowChildren) ||
+                  issue.gapContext.nextPage.bodyFlowChildren.some(node => !isMeasuredChild(node)))));
             if (malformed.length) {
               console.error('Malformed container-gap finding:', file, malformed.slice(0, 5));
               process.exit(1);
