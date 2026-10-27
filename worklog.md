@@ -1,3 +1,11 @@
+## 2026-10-27 — פירוט עמודים שכיסוי בדיקת הפערים שלהם אינו מלא (V23)
+
+- תוצאות הריצה המלאה בקומיט 2ad8456c3cf4690c229c53240369f59e471b84bd נבדקו: הריצה הרגילה הסתיימה עם 639 עמודים ו-40 ממצאים; ריצת העיטורים עם 659 עמודים ו-56 ממצאים. בשתיהן הדטרמיניזם, יומן ההחלטות, אבחון הסוגריים ושלמות מכשור הביקורת עברו.
+- למרות זאת, כיסוי בדיקת container-gap אינו מלא: 17 עמודים בריצה הרגילה ו-18 בריצת העיטורים סומנו missing-body-flow. אין לסווג זאת כתקלה במנוע או כחריגה צפויה בלי לזהות את העמודים ואת המבנה שלהם.
+- שינוי אבחוני: דוח geometry-audit.js יכלול מעתה רשומה לכל עמוד שלא נבדק, כולל אינדקס/תווית, סיבת אי-הבדיקה, מחלקות ה-DOM הישירות, מספר רכיבי page-body-flow, מספר רכיבי טקסט ותצוגת טקסט קצרה. ה-workflow יוודא שמספר הרשומות תואם למספר העמודים שלא נבדקו וידפיס דוגמאות מוגבלות.
+- לא שונתה לוגיקת העימוד ולא הוסתרו ממצאים. השלב הבא: להריץ מחדש את המסמך המלא, למפות את כל העמודים החסרים, לסווג את המבנה בפועל, ורק אז לתקן את שורש הבעיה או להגדיר חריג מבני מפורש ומנומק. אין להכריז על כיסוי גאומטרי מלא לפני שכל העמודים נבדקים או מוחרגים באופן מפורש.
+- V23 בלבד; אין מיזוג ל-V21.
+
 ## 2026-10-27 — Separate full-document geometry audit from high-cost causal tracing (V23)
 
 - Reviewed completed run [CLI 40425477005](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40425477005): SUCCESS. All smoke and targeted regressions passed, including no-legal-split, empty-column imbalance, missing-column distinction, sparse-page/square-bracket diagnostics, active-ornament gate policy, recto/verso header geometry, and active H2 title top/bottom geometry. Targeted reports retain step-audit instrumentation integrity PASS.

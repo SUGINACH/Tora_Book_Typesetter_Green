@@ -1876,6 +1876,7 @@ function auditGeometry(model) {
     const issues = [];
     let containerGapPagesEvaluated = 0;
     const containerGapNotEvaluatedReasons = {};
+    const containerGapNotEvaluatedPages = [];
     for (const page of model.pages) {
         for (const c of page.children) annotateParents(c, page);
         page._parent = null;
@@ -1896,6 +1897,27 @@ function auditGeometry(model) {
         } else {
             const reason = containerGapCheck?.reason || 'unknown-unchecked-reason';
             containerGapNotEvaluatedReasons[reason] = (containerGapNotEvaluatedReasons[reason] || 0) + 1;
+            // Preserve exact per-page evidence for incomplete coverage.
+            const pageEl = _nodeToEl && _nodeToEl.get(page);
+            const pageEls = Array.from(document.querySelectorAll('#book-container .a4-page'));
+            const bodyFlow = pageEl?.querySelector('.page-body-flow');
+            containerGapNotEvaluatedPages.push({
+                pageIdx: page.idx,
+                pageLabel: page.label,
+                reason,
+                domPageIndex: pageEl ? pageEls.indexOf(pageEl) : -1,
+                pageClass: pageEl ? String(pageEl.className || '') : null,
+                directChildClasses: pageEl
+                    ? Array.from(pageEl.children).map(el => String(el.className || el.tagName)).slice(0, 30)
+                    : [],
+                bodyFlowCount: pageEl ? pageEl.querySelectorAll('.page-body-flow').length : 0,
+                visibleTextElementCount: bodyFlow
+                    ? bodyFlow.querySelectorAll('p, .title-level-2-standalone, .title-level-3, .title-level-4, .title-level-5, .title-level-6, .title-level-7').length
+                    : 0,
+                pageTextPreview: pageEl
+                    ? String(pageEl.innerText || pageEl.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 180)
+                    : ''
+            });
         }
         auditOverflowToFootnote(page, issues);
         auditPageOverflow(page, issues);
@@ -1934,6 +1956,7 @@ function auditGeometry(model) {
                 pagesEvaluated: containerGapPagesEvaluated,
                 pagesNotEvaluated: model.pages.length - containerGapPagesEvaluated,
                 notEvaluatedReasons: containerGapNotEvaluatedReasons,
+                notEvaluatedPages: containerGapNotEvaluatedPages,
                 coverageComplete: containerGapPagesEvaluated === model.pages.length,
                 warningThresholdPx: CONTAINER_GAP_WARN_PX,
                 mediumThresholdPx: CONTAINER_GAP_MEDIUM_PX,
