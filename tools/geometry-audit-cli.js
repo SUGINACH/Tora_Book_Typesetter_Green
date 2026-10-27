@@ -13,7 +13,7 @@ const crypto = require('node:crypto');
 function parseArgs(argv) {
     const o = { input: null, settings: null, report: './artifacts/geometry-audit.json',
         summary: './artifacts/geometry-audit-summary.md', fullModel: false, failOn: 'high',
-        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, stepAuditMaxEvents:4000, stepAuditMaxElements:1200, stepAuditTextChars:180, stepAuditNoLineRects:false, stepAuditNoComputedStyle:false, stepAuditDisabled:false, help: false };
+        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, stepAuditMaxEvents:4000, stepAuditMaxElements:1200, stepAuditTextChars:180, stepAuditNoLineRects:false, stepAuditNoComputedStyle:false, stepAuditDisabled:false, stepAuditPageIndexes:null, help: false };
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         const take = () => { if (i + 1 >= argv.length) throw new Error('Missing value for ' + arg); return argv[++i]; };
@@ -34,6 +34,12 @@ function parseArgs(argv) {
             case '--step-audit-no-line-rects': o.stepAuditNoLineRects = true; break;
             case '--step-audit-no-computed-style': o.stepAuditNoComputedStyle = true; break;
             case '--step-audit-disabled': o.stepAuditDisabled = true; break;
+            case '--step-audit-page-indexes': {
+                const raw = take().split(',').map(v => v.trim());
+                if (!raw.length || raw.some(v => !/^\\d+$/.test(v))) throw new Error('--step-audit-page-indexes must be a comma-separated list of zero-based nonnegative integers');
+                o.stepAuditPageIndexes = [...new Set(raw.map(Number))];
+                break;
+            }
             case '--test-missing-column-element': o.testMissingColumnElement = true; break;
             case '--fail-on': o.failOn = take(); break;
             case '--timeout-ms': o.timeoutMs = Number(take()); break;
@@ -44,6 +50,8 @@ function parseArgs(argv) {
         }
     }
     if (!['high', 'medium', 'low', 'none'].includes(o.failOn)) throw new Error('--fail-on must be high, medium, low, or none');
+    if (o.stepAuditPageIndexes && (!o.stepAuditPageIndexes.length || o.stepAuditPageIndexes.some(n => !Number.isSafeInteger(n) || n < 0))) throw new Error('--step-audit-page-indexes must contain zero-based nonnegative safe integers');
+    if (o.stepAuditDisabled && o.stepAuditPageIndexes) throw new Error('--step-audit-page-indexes cannot be combined with --step-audit-disabled');
     return o;
 }
 function help() {
@@ -51,7 +59,7 @@ function help() {
       'Options: --settings <json-file>, --report <json-file>, --summary <md-file>, --full-model, --repeat-check,\n' +
       '--fail-on <high|medium|low|none>, --timeout-ms <number>, --viewport-width <number>, --viewport-height <number>, --require-ornaments, --require-geometry-features, --require-note-marker-line-diagnostics,\n' +
       '--test-empty-column-balance, --test-missing-column-element (regression tests only),\n' +
-      '--step-audit-max-events <n>, --step-audit-max-elements <n>, --step-audit-text-chars <n>, --step-audit-no-line-rects, --step-audit-no-computed-style, --step-audit-disabled\n');
+      '--step-audit-max-events <n>, --step-audit-max-elements <n>, --step-audit-text-chars <n>, --step-audit-page-indexes <i,j,...> (targeted causal trace), --step-audit-no-line-rects, --step-audit-no-computed-style, --step-audit-disabled\n');
 }
 function abs(p) { return path.resolve(process.cwd(), p); }
 function ensureParent(p) { fs.mkdirSync(path.dirname(p), { recursive: true }); }
@@ -816,12 +824,12 @@ async function main() {
             if (document.fonts && document.fonts.ready) await document.fonts.ready;
         });
 
-        const renderResult = await triggerTypeset(page, inputText, settings, args.timeoutMs, { enabled: !args.stepAuditDisabled, maxEventsPerPage: args.stepAuditMaxEvents, maxElementsPerSnapshot: args.stepAuditMaxElements, maxTextChars: args.stepAuditTextChars, captureLineRects: !args.stepAuditNoLineRects, captureComputedStyle: !args.stepAuditNoComputedStyle });
+        const renderResult = await triggerTypeset(page, inputText, settings, args.timeoutMs, { enabled: !args.stepAuditDisabled, maxEventsPerPage: args.stepAuditMaxEvents, maxElementsPerSnapshot: args.stepAuditMaxElements, maxTextChars: args.stepAuditTextChars, captureLineRects: !args.stepAuditNoLineRects, captureComputedStyle: !args.stepAuditNoComputedStyle, targetPageIndexes: args.stepAuditPageIndexes });
         let determinismCheck = null;
         if (args.repeatCheck) {
             const firstSignature = await captureLayoutSignature(page);
             const firstPageHashes = firstSignature.map(sha256);
-            const secondRenderResult = await triggerTypeset(page, inputText, settings, args.timeoutMs, { enabled: !args.stepAuditDisabled, maxEventsPerPage: args.stepAuditMaxEvents, maxElementsPerSnapshot: args.stepAuditMaxElements, maxTextChars: args.stepAuditTextChars, captureLineRects: !args.stepAuditNoLineRects, captureComputedStyle: !args.stepAuditNoComputedStyle });
+            const secondRenderResult = await triggerTypeset(page, inputText, settings, args.timeoutMs, { enabled: !args.stepAuditDisabled, maxEventsPerPage: args.stepAuditMaxEvents, maxElementsPerSnapshot: args.stepAuditMaxElements, maxTextChars: args.stepAuditTextChars, captureLineRects: !args.stepAuditNoLineRects, captureComputedStyle: !args.stepAuditNoComputedStyle, targetPageIndexes: args.stepAuditPageIndexes });
             const secondSignature = await captureLayoutSignature(page);
             const secondPageHashes = secondSignature.map(sha256);
             const common = Math.min(firstPageHashes.length, secondPageHashes.length);
@@ -1604,7 +1612,7 @@ async function main() {
             run:{ input:path.relative(root,inputPath).split(path.sep).join('/'), inputBytes:Buffer.byteLength(inputText,'utf8'),
               generatedAt:new Date().toISOString(), branch:process.env.GITHUB_REF_NAME || null,
               gitCommit:process.env.GITHUB_SHA || null, viewport:{width:args.viewportWidth,height:args.viewportHeight,deviceScaleFactor:1},
-              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, stepAudit:{enabled:!args.stepAuditDisabled, disabledByRequest:args.stepAuditDisabled, disableReason:args.stepAuditDisabled?'full-document-stability-policy':null, maxEvents:args.stepAuditMaxEvents, maxElements:args.stepAuditMaxElements, textChars:args.stepAuditTextChars, includeLineRects:!args.stepAuditNoLineRects, includeComputedStyle:!args.stepAuditNoComputedStyle}, browser:'Chromium headless' },
+              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, stepAudit:{enabled:!args.stepAuditDisabled, disabledByRequest:args.stepAuditDisabled, disableReason:args.stepAuditDisabled?'full-document-stability-policy':null, maxEvents:args.stepAuditMaxEvents, maxElements:args.stepAuditMaxElements, textChars:args.stepAuditTextChars, includeLineRects:!args.stepAuditNoLineRects, includeComputedStyle:!args.stepAuditNoComputedStyle, targetPageIndexes:args.stepAuditPageIndexes}, browser:'Chromium headless' },
             pageCount:data.pageCount,
             geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,stepByStepAudit:data.stageByStepAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
             audit:{summary:data.summary,issues:data.issues,checks:data.checks},
