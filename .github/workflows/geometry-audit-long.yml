@@ -362,7 +362,11 @@ jobs:
           const malformed = targetIssues.filter(issue =>
             issue.stepByStepTrace?.traceAvailable !== true ||
             issue.stepByStepTrace?.traceComplete !== true ||
-            issue.stepByStepTrace?.droppedEvents !== 0);
+            issue.stepByStepTrace?.droppedEvents !== 0 ||
+            !Array.isArray(issue.stepByStepTrace?.targetTouchEventIndexes) ||
+            issue.stepByStepTrace.targetTouchEventIndexes.length === 0 ||
+            !Array.isArray(issue.stepByStepTrace?.relatedTokenIds) ||
+            issue.stepByStepTrace.relatedTokenIds.length === 0);
           const targetPages = (traces?.pages || []).map(page => page.pageIndex);
           if (!mode || mode.enabled !== true || mode.disabledByRequest !== false ||
               JSON.stringify(mode.targetPageIndexes) !== JSON.stringify([376]) ||
@@ -384,7 +388,9 @@ jobs:
             eventCount: traces.pages[0].eventCount,
             droppedEvents: traces.pages[0].droppedEvents,
             traceComplete: true,
-            causalityPolicy: 'stage chronology captured; causal trigger still requires evidence-based interpretation',
+            relatedTokenIds: targetIssues[0].stepByStepTrace.relatedTokenIds,
+            targetTouchEventIndexes: targetIssues[0].stepByStepTrace.targetTouchEventIndexes,
+            causalityPolicy: 'related paragraph events linked; causal trigger still requires evidence-based interpretation',
             targetedTraceGate: 'PASS'
           }));
           NODE
