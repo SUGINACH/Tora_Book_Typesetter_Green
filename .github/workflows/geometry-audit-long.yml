@@ -61,11 +61,11 @@ jobs:
           NODE
       - name: Run long-document geometry audit
         run: npm run audit:geometry:long -- --fail-on high --repeat-check --step-audit-disabled --require-note-marker-line-diagnostics
-      - name: Assert step-audit suppression is explicit in both full-document reports
+      - name: Assert step-audit suppression is explicit in default full-document report
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
-          for (const file of ['./artifacts/geometry-audit.json', './artifacts/geometry-audit-ornaments.json']) {
+          for (const file of ['./artifacts/geometry-audit.json']) {
             const report = JSON.parse(fs.readFileSync(file, 'utf8'));
             const mode = report.run?.stepAudit;
             const issues = report.audit?.issues || [];
@@ -146,6 +146,29 @@ jobs:
             decorativeGeometryCoverage: features,
             dividerHeaderGate: 'PASS'
           }));
+          NODE
+      - name: Assert step-audit suppression is explicit in ornament full-document report
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = './artifacts/geometry-audit-ornaments.json';
+          const report = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const mode = report.run?.stepAudit;
+          const issues = report.audit?.issues || [];
+          const malformed = issues.filter(issue =>
+            issue.stepByStepTrace?.traceAvailable !== false ||
+            issue.stepByStepTrace?.reason !== 'step-audit-disabled-by-request' ||
+            typeof issue.stepByStepTrace?.detail !== 'string' ||
+            !issue.stepByStepTrace.detail.includes('Full-document workflow disables step tracing'));
+          if (!mode || mode.enabled !== false || mode.disabledByRequest !== true ||
+              mode.disableReason !== 'full-document-stability-policy' || malformed.length) {
+            console.error('Ornament full-document trace suppression must be explicit:', {
+              file, mode, issueCount: issues.length, malformedTraceSamples: malformed.slice(0, 10)
+            });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({file, stepAudit: mode, issueCount: issues.length,
+            allIssuesExplicitlyMarkedTraceDisabled: true, tracePolicyGate: 'PASS'}));
           NODE
       - name: Assert global-justify rollback residuals are explicitly diagnosed
         run: |
