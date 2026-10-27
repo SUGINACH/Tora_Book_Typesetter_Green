@@ -95,6 +95,60 @@ jobs:
           }
           console.log(JSON.stringify({ explicitNoLegalSplitDecisions: matches.length, validatedStructuralFallbacks: fallbacks.length, decisionContract: 'PASS' }));
           NODE
+      - name: Run paragraph-balance capacity fixture followed by H3
+        run: node tools/geometry-audit-cli.js --input ./tests/fixtures/balance-capacity-before-h3.txt --report ./artifacts/balance-capacity-before-h3.json --summary ./artifacts/balance-capacity-before-h3.md --fail-on none --repeat-check
+      - name: Assert balance candidate ledger and stretch-capacity measurements
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('./artifacts/balance-capacity-before-h3.json', 'utf8'));
+          const records = report.geometry?.layoutDecisionRecords || [];
+          const evaluated = records.filter(record => {
+            const selection = record.decision?.selection;
+            const capacity = record.decision?.finalJustify?.capacityBefore;
+            return selection?.status === 'evaluated' &&
+              Array.isArray(selection.candidateTable) && selection.candidateTable.length > 0 &&
+              Number.isInteger(selection.selectedCandidateIndex) &&
+              capacity && Number.isFinite(capacity.right?.totalCapacity) &&
+              Number.isFinite(capacity.left?.totalCapacity) &&
+              Number.isFinite(record.decision?.final?.rightHeight) &&
+              Number.isFinite(record.decision?.final?.leftHeight);
+          });
+          const badWinner = evaluated.filter(record => {
+            const s = record.decision.selection;
+            const tuple = c => c.score || [c.fits ? 0 : 1, c.valid ? 0 : 1,
+              c.fits ? 0 : c.overflow, c.absoluteDiff, c.signedDiff >= 0 ? 0 : 1, c.k];
+            const compare = (a, b) => {
+              const x = tuple(a), y = tuple(b);
+              for (let i = 0; i < Math.max(x.length, y.length); i++) {
+                if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
+              }
+              return 0;
+            };
+            const expected = [...s.candidateTable].sort(compare)[0];
+            return expected.k !== s.selectedCandidateIndex;
+          });
+          const conservation = report.geometry?.textConservationAudit || {};
+          const headingAudit = conservation.headingAudit || {};
+          if (!evaluated.length || badWinner.length || conservation.missingSourceParagraphCount !== 0 ||
+              conservation.textMismatchCount !== 0 || headingAudit.missingCount !== 0 ||
+              headingAudit.mismatchCount !== 0) {
+            console.error('Balance/H3 fixture did not provide a complete, internally consistent candidate/capacity record or content conservation:', {
+              evaluated: evaluated.length, badWinner: badWinner.map(r => ({pageIdx:r.pageIdx, selected:r.decision.selection.selectedCandidateIndex})),
+              conservation, headingAudit
+            });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            evaluatedCandidateLedgers: evaluated.length,
+            chosenCandidatesMatchRecordedLexicographicPolicy: true,
+            stretchCapacityAndFinalHeightsRecorded: true,
+            sourceParagraphsPreserved: true,
+            headingsPreserved: true,
+            repeatRenderDeterminism: report.run?.determinismCheck || null,
+            fixtureGate: 'PASS'
+          }));
+          NODE
       - name: Run completely empty column balance regression
         run: node tools/geometry-audit-cli.js --input ./tests/fixtures/geometry-audit-smoke.txt --report ./artifacts/empty-column-report.json --summary ./artifacts/empty-column-summary.md --fail-on none --test-empty-column-balance
       - name: Assert completely empty column is reported as imbalance
