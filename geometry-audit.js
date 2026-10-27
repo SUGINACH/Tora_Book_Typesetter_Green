@@ -1566,7 +1566,16 @@ function auditContainerGaps(page, issues) {
             item.rect.bottom > flowRect.top &&
             String(item.el.getAttribute('data-raw-text') || item.el.textContent || '').trim()
         );
-    if (!visibleText.length) return { checked: true, excluded: 'no-visible-body-text' };
+    if (!visibleText.length) {
+        return {
+            checked: true,
+            excluded: 'no-visible-body-text',
+            pageClass: String(pageEl.className || ''),
+            candidateTextElementCount: textEls.length,
+            visibleTextElementCount: visibleText.length,
+            bodyFlowHeightPx: Math.round(flowRect.height * 100) / 100
+        };
+    }
 
     const last = visibleText.reduce((best, item) =>
         !best || item.rect.bottom > best.rect.bottom ? item : best, null);
@@ -2087,7 +2096,10 @@ function auditGeometry(model) {
                 reason,
                 specialPageType: containerGapCheck.specialPageType || null,
                 pageClass: containerGapCheck.pageClass || null,
-                boundaryPageClass: containerGapCheck.boundaryPageClass || null
+                boundaryPageClass: containerGapCheck.boundaryPageClass || null,
+                candidateTextElementCount: containerGapCheck.candidateTextElementCount ?? null,
+                visibleTextElementCount: containerGapCheck.visibleTextElementCount ?? null,
+                bodyFlowHeightPx: containerGapCheck.bodyFlowHeightPx ?? null
             });
         } else if (containerGapCheck && containerGapCheck.checked) {
             containerGapPagesEvaluated++;

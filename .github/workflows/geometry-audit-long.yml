@@ -237,6 +237,16 @@ jobs:
                   page.pageClass == null &&
                   page.boundaryPageClass == null;
               }
+              if (page.reason === 'no-visible-body-text') {
+                return page.specialPageType == null &&
+                  typeof page.pageClass === 'string' &&
+                  page.boundaryPageClass == null &&
+                  Number.isInteger(page.candidateTextElementCount) &&
+                  page.candidateTextElementCount >= 0 &&
+                  page.visibleTextElementCount === 0 &&
+                  Number.isFinite(page.bodyFlowHeightPx) &&
+                  page.bodyFlowHeightPx > 0;
+              }
               return false;
             };
             if (!check || !Array.isArray(excludedPages) ||
@@ -251,7 +261,8 @@ jobs:
                 contract: {
                   explicitSpecialRole: 'specialPageType + pageClass; no boundaryPageClass',
                   sectionEndBeforeDivider: 'section-divider-page + boundaryPageClass containing sub-shaar-page',
-                  chapterOrDocumentEnd: 'no special-page metadata'
+                  chapterOrDocumentEnd: 'no special-page metadata',
+                  noVisibleBodyText: 'no special-page metadata + zero visible text matches + finite positive body-flow height'
                 }
               });
               process.exit(1);
