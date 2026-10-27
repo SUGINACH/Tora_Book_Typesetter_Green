@@ -3790,7 +3790,8 @@ window.addEventListener('beforeprint', () => { if (settingsDirty) typesetDocumen
 /* Step-by-step layout audit: diagnostic-only page deltas around layout/repair stages. */
 (function installStepByStepAudit() {
     const config = { enabled:true, maxEventsPerPage:4000, maxElementsPerSnapshot:1200, maxTextChars:180,
-        captureLineRects:true, captureComputedStyle:true, ...(window.__stepByStepAuditConfig||{}) };
+        captureLineRects:true, captureComputedStyle:true, targetPageIndexes:null, ...(window.__stepByStepAuditConfig||{}) };
+    if (Array.isArray(config.targetPageIndexes)) config.targetPageIndexes = [...new Set(config.targetPageIndexes.filter(Number.isInteger))];
     const states = new Map(), round=n=>Number.isFinite(n)?Math.round(n*10)/10:null;
     const cls=el=>typeof el.className==='string'?el.className:(el.className?.baseVal||'');
     const txt=(el,n)=>String(el.getAttribute('data-raw-text')||el.getAttribute('aria-label')||el.textContent||'')
@@ -3887,6 +3888,8 @@ window.addEventListener('beforeprint', () => { if (settingsDirty) typesetDocumen
         tokenId:e.getAttribute('data-token-id')||null,text:txt(e,config.maxTextChars)}:null;}
     function record(page,stage,phase,target,force){
         if(!config.enabled||!page?.classList?.contains('a4-page'))return;
+        const currentPageIndex=Array.from(document.querySelectorAll('#book-container .a4-page')).indexOf(page);
+        if (Array.isArray(config.targetPageIndexes) && config.targetPageIndexes.length && !config.targetPageIndexes.includes(currentPageIndex)) return;
         let s=states.get(page);if(!s){s={page,events:[],previous:null,droppedEvents:0,snapshotCount:0};states.set(page,s);}
         const now=snapshot(page);s.snapshotCount++;const prev=s.previous,added=[],removed=[],changed=[];
         if(prev){for(const[k,node]of now.nodes){const old=prev.nodes.get(k);if(!old)added.push(node);else if(JSON.stringify(old)!==JSON.stringify(node))changed.push({key:k,before:old,after:node});}
@@ -3894,7 +3897,7 @@ window.addEventListener('beforeprint', () => { if (settingsDirty) typesetDocumen
         const metricsChanged=!prev||JSON.stringify(prev.metrics)!==JSON.stringify(now.metrics);s.previous=now;
         if(!force&&!added.length&&!removed.length&&!changed.length&&!metricsChanged)return;
         if(s.events.length>=config.maxEventsPerPage){s.droppedEvents++;return;}
-        s.events.push({index:s.events.length,stage,phase,target:targetInfo(target),pageIndex:Array.from(document.querySelectorAll('#book-container .a4-page')).indexOf(page),
+        s.events.push({index:s.events.length,stage,phase,target:targetInfo(target),pageIndex:currentPageIndex,
             pageLabel:page.querySelector('.page-number-footer')?.textContent?.trim()||null,pageMetricsBefore:prev?.metrics||null,
             pageMetricsAfter:now.metrics,delta:{added,removed,changed},deltaCounts:{added:added.length,removed:removed.length,changed:changed.length},
             noGeometryChange:!added.length&&!removed.length&&!changed.length&&!metricsChanged});}
