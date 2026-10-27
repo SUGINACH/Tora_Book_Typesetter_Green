@@ -38,6 +38,25 @@ jobs:
         run: node tools/geometry-audit-cli.js --help
       - name: Run geometry audit smoke test
         run: node tools/geometry-audit-cli.js --input ./tests/fixtures/geometry-audit-smoke.txt --report ./artifacts/smoke-report.json --summary ./artifacts/smoke-summary.md --fail-on none --repeat-check
+      - name: Assert enabled step-audit mode is explicit in smoke report
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('./artifacts/smoke-report.json', 'utf8'));
+          const mode = report.run?.stepAudit;
+          const issues = report.audit?.issues || [];
+          const falselyDisabled = issues.filter(issue =>
+            issue.stepByStepTrace?.reason === 'step-audit-disabled-by-request');
+          if (!mode || mode.enabled !== true || mode.disabledByRequest !== false ||
+              mode.disableReason !== null || falselyDisabled.length) {
+            console.error('An ordinary smoke run must record step audit as enabled and must not label traces as intentionally disabled:', {
+              mode, falselyDisabled: falselyDisabled.slice(0, 10)
+            });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({stepAudit: mode, issueCount: issues.length,
+            enabledModeGate: 'PASS'}));
+          NODE
       - name: Run no-legal-two-column-split regression fixture
         run: node tools/geometry-audit-cli.js --input ./tests/fixtures/no-legal-two-column-split.txt --report ./artifacts/no-legal-split-report.json --summary ./artifacts/no-legal-split-summary.md --fail-on none
       - name: Assert no-legal-split decision is explicit and complete
