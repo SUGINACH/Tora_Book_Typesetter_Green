@@ -356,7 +356,7 @@ jobs:
           const file = './artifacts/geometry-audit-targeted-trace.json';
           const report = JSON.parse(fs.readFileSync(file, 'utf8'));
           const mode = report.run?.stepAudit;
-          const traces = report.geometry?.stageByStepAudit;
+          const traces = report.geometry?.stepByStepAudit;
           const targetIssues = (report.audit?.issues || []).filter(issue =>
             issue.pageIdx === 376 && issue.kind === 'imbalance');
           const malformed = targetIssues.filter(issue =>
