@@ -1565,19 +1565,31 @@ function auditContainerGaps(page, issues) {
         nextHeadingRect.top < nextFlowRect.top + nextFlowRect.height * 0.45
     );
     if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
-    // A real section-divider page is an explicit structural boundary. When the
-    // current page also carries the renderer's terminal divider, whitespace below
-    // the text is not evidence of an accidental gap within a continuing section.
-    const nextPageIsSectionBoundary = !!(
-        nextPage?.classList.contains('sub-shaar-page') &&
-        bodyFlow.querySelector('.sec-divider-wrap')
-    );
+    // A section-end divider is a structural terminal marker, not a demand to
+    // fill the remaining page. Odd-page-start policy can insert one explicit blank
+    // page before the next section-title page, so inspect that narrowly defined
+    // two-step boundary as well as the direct transition.
+    const hasTerminalSectionDivider =
+        !!bodyFlow.lastElementChild?.classList.contains('sec-divider-wrap');
+    const interveningBlankPage = !!nextPage?.classList.contains('blank-page');
+    const followingPage = interveningBlankPage ? pageEls[pageIndex + 2] : null;
+    const boundaryPage = nextPage?.classList.contains('sub-shaar-page')
+        ? nextPage
+        : (interveningBlankPage && followingPage?.classList.contains('sub-shaar-page')
+            ? followingPage
+            : null);
+    const nextPageIsSectionBoundary = !!(hasTerminalSectionDivider && boundaryPage);
     if (nextPageIsSectionBoundary) {
         return {
             checked: true,
             excluded: 'section-end-before-divider',
             specialPageType: 'section-divider-page',
-            boundaryPageClass: String(nextPage.className || '')
+            hasTerminalSectionDivider,
+            boundaryPageIndex: pageEls.indexOf(boundaryPage),
+            boundaryPageClass: String(boundaryPage.className || ''),
+            interveningBlankPageClass: interveningBlankPage
+                ? String(nextPage.className || '')
+                : null
         };
     }
     if (pageIndex >= 0 && pageIndex === pageEls.length - 1) {
@@ -2135,6 +2147,9 @@ function auditGeometry(model) {
                 specialPageType: containerGapCheck.specialPageType || null,
                 pageClass: containerGapCheck.pageClass || null,
                 boundaryPageClass: containerGapCheck.boundaryPageClass || null,
+                hasTerminalSectionDivider: containerGapCheck.hasTerminalSectionDivider ?? null,
+                boundaryPageIndex: containerGapCheck.boundaryPageIndex ?? null,
+                interveningBlankPageClass: containerGapCheck.interveningBlankPageClass ?? null,
                 candidateTextElementCount: containerGapCheck.candidateTextElementCount ?? null,
                 visibleTextElementCount: containerGapCheck.visibleTextElementCount ?? null,
                 bodyFlowHeightPx: containerGapCheck.bodyFlowHeightPx ?? null

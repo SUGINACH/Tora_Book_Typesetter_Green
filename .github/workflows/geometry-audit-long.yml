@@ -279,6 +279,48 @@ jobs:
             diagnosticGate: 'PASS'
           }));
           NODE
+      - name: Assert terminal section-divider gaps are excluded only across verified boundaries
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const cases = [
+            {file:'./artifacts/geometry-audit.json', expectedExcluded:[590]},
+            {file:'./artifacts/geometry-audit-ornaments.json', expectedExcluded:[588,608,628]}
+          ];
+          for (const item of cases) {
+            const report = JSON.parse(fs.readFileSync(item.file,'utf8'));
+            const check = report.audit?.checks?.containerGap;
+            const issues = report.audit?.issues || [];
+            const excluded = check?.excludedPages || [];
+            const findings = issues.filter(issue=>issue.kind==='container-gap');
+            const expectedMissing = item.expectedExcluded.filter(pageIdx =>
+              !excluded.some(page=>page.pageIdx===pageIdx &&
+                page.reason==='section-end-before-divider' &&
+                page.hasTerminalSectionDivider===true &&
+                Number.isInteger(page.boundaryPageIndex) &&
+                page.interveningBlankPageClass?.includes('blank-page') &&
+                page.boundaryPageClass?.includes('sub-shaar-page')));
+            const wronglyReported = findings.filter(issue=>item.expectedExcluded.includes(issue.pageIdx));
+            const unsupportedBlankExclusions = excluded.filter(page =>
+              page.reason==='section-end-before-divider' &&
+              page.interveningBlankPageClass?.includes('blank-page') &&
+              (page.hasTerminalSectionDivider!==true ||
+               !page.boundaryPageClass?.includes('sub-shaar-page') ||
+               !Number.isInteger(page.boundaryPageIndex)));
+            if (!check || expectedMissing.length || wronglyReported.length || unsupportedBlankExclusions.length) {
+              console.error('Terminal section boundary classification failed:',item.file,{
+                expectedMissing,wronglyReported,unsupportedBlankExclusions
+              });
+              process.exit(1);
+            }
+            console.log(JSON.stringify({
+              file:item.file,
+              expectedTerminalBoundaryPages:item.expectedExcluded,
+              unsupportedBlankExclusions:unsupportedBlankExclusions.length,
+              sectionBoundaryGate:'PASS'
+            }));
+          }
+          NODE
       - name: Assert container-gap diagnostics account for every page
         run: |
           node - <<'NODE'
@@ -301,8 +343,13 @@ jobs:
               if (page.reason === 'section-end-before-divider') {
                 return page.specialPageType === 'section-divider-page' &&
                   page.pageClass == null &&
+                  page.hasTerminalSectionDivider === true &&
+                  Number.isInteger(page.boundaryPageIndex) &&
                   typeof page.boundaryPageClass === 'string' &&
-                  page.boundaryPageClass.includes('sub-shaar-page');
+                  page.boundaryPageClass.includes('sub-shaar-page') &&
+                  (page.interveningBlankPageClass == null ||
+                   (typeof page.interveningBlankPageClass === 'string' &&
+                    page.interveningBlankPageClass.includes('blank-page')));
               }
               if (page.reason === 'chapter-end' || page.reason === 'document-end') {
                 return page.specialPageType == null &&
