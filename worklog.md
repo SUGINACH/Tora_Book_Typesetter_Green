@@ -3407,3 +3407,13 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - Added a CI preflight step to run `node --check` on every browser-loaded JavaScript file before the smoke test, so future syntax failures identify the precise file before a readiness timeout.
 - Parser validation of the corrected `typesetter.js` passes. Full confirmation remains pending CI: CLI smoke and the complete `very_long_test_text.txt` run must pass; then inspect repeat determinism, trace coverage, content preservation and active ornaments. The failed runs provide no valid layout-quality results.
 - Scope: V23 only. No merge or cherry-pick into V21.
+
+
+## 2026-10-27 — Expose browser runtime exception details in CI logs (V23)
+
+- Reviewed completed runs [CLI 40423082840](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40423082840), [long document 40423082650](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40423082650), and [Pages 40423081533](https://github.com/SUGINACH/Tora_Book_Typesetter_Green/actions/runs/40423081533). Pages succeeded. Both audit runs now pass all JavaScript syntax preflights and reach the renderer/typesetting stage; the prior syntax blocker is resolved.
+- CLI smoke rendered 6 pages and emitted 3 findings (0 high, 2 medium, 1 low), decision ledger 2/2, determinism PASS, instrumentation integrity PASS, but exited 2 due to one browser JavaScript exception. This stops the remaining smoke regression fixtures.
+- Full run processed `very_long_test_text.txt` (3,424,454 bytes), rendered 639 pages, emitted 40 findings (0 high, 12 medium, 28 low), with 858/858 decision records, determinism PASS, complete parenthesis diagnostics 858/858, note-marker line diagnostics PASS, and instrumentation integrity PASS. It still exited 2 due to one browser JavaScript exception, so downstream gates (including active ornaments and explicit residual assertions) were skipped. The audit is not considered green merely because there are zero high-severity layout issues.
+- Added bounded printing of browser exception stack details (up to 20) to stderr when the CLI exits due to page errors. This is observability only; it does not suppress errors or change layout decisions.
+- Next: rerun CLI and full long-document workflow, inspect the exact browser exception stack, fix its root cause, then ensure all regression and active-ornament assertions execute. Do not classify current geometry findings as resolved without examining their records.
+- V23 only; no V21 merge.

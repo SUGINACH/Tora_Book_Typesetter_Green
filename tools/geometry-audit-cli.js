@@ -1664,7 +1664,11 @@ async function main() {
                   args.requireNoteMarkerLineDiagnostics + ')') + '\n');
         process.stdout.write('Audit instrumentation integrity: ' +
             (integrityFailures.length ? 'FAIL (' + integrityFailures.join('; ') + ')' : 'PASS') + '\n');
-        if (pageErrors.length) { process.stderr.write('Browser JavaScript errors: ' + pageErrors.length + '\n'); process.exitCode = 2; }
+        if (pageErrors.length) {
+            process.stderr.write('Browser JavaScript errors: ' + pageErrors.length + '\n');
+            process.stderr.write('Browser JavaScript error details (up to 20):\n' + pageErrors.slice(0, 20).map((error, index) => '[' + (index + 1) + '] ' + error).join('\n---\n') + '\n');
+            process.exitCode = 2;
+        }
         else if (nondeterministic) { process.stderr.write('Determinism check failed at page ' + report.run.determinismCheck.firstDifferingPage + '\n'); process.exitCode = 3; }
         else if (fail) process.exitCode = 1;
         else if (integrityFailures.length) process.exitCode = 4;
