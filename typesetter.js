@@ -3792,7 +3792,8 @@ window.addEventListener('beforeprint', () => { if (settingsDirty) typesetDocumen
     const config = { enabled:true, maxEventsPerPage:4000, maxElementsPerSnapshot:1200, maxTextChars:180,
         captureLineRects:true, captureComputedStyle:true, targetPageIndexes:null, ...(window.__stepByStepAuditConfig||{}) };
     if (Array.isArray(config.targetPageIndexes)) config.targetPageIndexes = [...new Set(config.targetPageIndexes.filter(Number.isInteger))];
-    const states = new Map(), round=n=>Number.isFinite(n)?Math.round(n*10)/10:null;
+    const states = new Map(), pageIndexCache = new WeakMap(), round=n=>Number.isFinite(n)?Math.round(n*10)/10:null;
+    function pageIndexOf(page){if(pageIndexCache.has(page))return pageIndexCache.get(page);const index=Array.from(document.querySelectorAll('#book-container .a4-page')).indexOf(page);pageIndexCache.set(page,index);return index;}
     const cls=el=>typeof el.className==='string'?el.className:(el.className?.baseVal||'');
     const txt=(el,n)=>String(el.getAttribute('data-raw-text')||el.getAttribute('aria-label')||el.textContent||'')
         .replace(/[\s\u200e\u200f]+/g,' ').trim().slice(0,n);
@@ -3888,7 +3889,7 @@ window.addEventListener('beforeprint', () => { if (settingsDirty) typesetDocumen
         tokenId:e.getAttribute('data-token-id')||null,text:txt(e,config.maxTextChars)}:null;}
     function record(page,stage,phase,target,force){
         if(!config.enabled||!page?.classList?.contains('a4-page'))return;
-        const currentPageIndex=Array.from(document.querySelectorAll('#book-container .a4-page')).indexOf(page);
+        const currentPageIndex=pageIndexOf(page);
         if (Array.isArray(config.targetPageIndexes) && config.targetPageIndexes.length && !config.targetPageIndexes.includes(currentPageIndex)) return;
         let s=states.get(page);if(!s){s={page,events:[],previous:null,droppedEvents:0,snapshotCount:0};states.set(page,s);}
         const now=snapshot(page);s.snapshotCount++;const prev=s.previous,added=[],removed=[],changed=[];
