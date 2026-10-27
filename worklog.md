@@ -3690,3 +3690,12 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - נוסף שער Long שמוודא את ארבעת המקרים המדווחים ואת הראיות המבניות בשתי התצורות. לא שונו ספי gap או אלגוריתם העימוד. ממצאי `sparse-page` נשארים שלב נפרד ואינם מטופלים בשינוי זה.
 - ה-artifact הקודם מציג 9 ממצאי container-gap בברירת מחדל ו-16 עם עיטורים; המונים ייבדקו מחדש אחרי התיקון, ולא ייחשבו הצלחה בפני עצמם. עמוד 376 נשאר מושהה; אין מיזוג ל-V21.
 
+
+
+## 2026-10-27 — מעבר שיחה ותוצאות Long audit (V23)
+
+- ריצת Long `40506660569` וריצת CLI `40506660520` עברו על `e190b1191377e897a0cf63ac6acc7a32a1db547d`; HEAD branch לאחר ארכוב ה-PDF הוא `643adc8fadda2eefd794adaa866c8c03a29fb2ba`.
+- ה-PDF עם 26 צילומי עמודים אמיתיים נשמר ב-`V23/reports/container-gap_imbalance_sparse-page_square-bracket-scope_structural-fallback_2026-10-27_run-40506660569/`. המשתמש עדיין לא עבר עליו; יש להציגו בתחילת השיחה הבאה ולקבל את הערותיו לפני מסקנות חזותיות.
+- containment-rounding: 0 issues פעילים, 6/10 רשומות note-marker נסבלות (default/ornaments). container-gap coverage מלאה; sparse-page coverage עדיין לא מלאה: 17/18 `missing-body-flow` לא מוערכים.
+- יש לאמת במפורש את מיפוי target סוף-החלק: JSON default מכיל gap ב-`pageIdx=589` (177px) אך gate מאמת exclusion ב-`pageIdx=590`. אין לסגור עד לאימות לפי PDF/manifest ותווית העמוד.
+- קובץ מעבר מפורט ופרומפט לפתיחה: `V23/CONTINUATION_2026-10-27.md`. עמוד 376 מושהה; V23 בלבד, אין מיזוג ל-V21.
