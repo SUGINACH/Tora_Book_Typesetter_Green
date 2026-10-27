@@ -177,11 +177,18 @@ jobs:
                 excludedPages.some(page =>
                   !Number.isInteger(page.pageIdx) ||
                   typeof page.reason !== 'string' ||
-                  typeof page.specialPageType !== 'string' ||
-                  typeof page.pageClass !== 'string')) {
-              console.error('Explicit page exclusions are missing or inconsistent:', file, {
+                  (page.reason === 'explicit-special-page-role'
+                    ? typeof page.specialPageType !== 'string' || typeof page.pageClass !== 'string'
+                    : page.specialPageType != null || page.pageClass != null))) {
+              console.error('Page exclusion records are missing, malformed, or inconsistent with their reason:', file, {
                 pagesExcluded: check?.pagesExcluded,
-                excludedPages: Array.isArray(excludedPages) ? excludedPages.length : null
+                excludedPages: Array.isArray(excludedPages) ? excludedPages.length : null,
+                malformedSamples: Array.isArray(excludedPages) ? excludedPages.filter(page =>
+                  !Number.isInteger(page.pageIdx) ||
+                  typeof page.reason !== 'string' ||
+                  (page.reason === 'explicit-special-page-role'
+                    ? typeof page.specialPageType !== 'string' || typeof page.pageClass !== 'string'
+                    : page.specialPageType != null || page.pageClass != null)).slice(0, 10) : null
               });
               process.exit(1);
             }

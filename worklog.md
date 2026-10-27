@@ -3455,3 +3455,11 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - Added bounded printing of browser exception stack details (up to 20) to stderr when the CLI exits due to page errors. This is observability only; it does not suppress errors or change layout decisions.
 - Next: rerun CLI and full long-document workflow, inspect the exact browser exception stack, fix its root cause, then ensure all regression and active-ornament assertions execute. Do not classify current geometry findings as resolved without examining their records.
 - V23 only; no V21 merge.
+
+
+## 2026-10-27 — תיקון חוזה אימות רשומות החרגה ב־container-gap
+
+- ריצת המסמך הארוך ב־commit `feb7cfa24e0d457b3caf32e767517152d63bb4c7` השלימה את שתי ריצות העימוד ואת שערי הדטרמיניזם/האבחון, אך נכשלה בשער אימות רשומות ההחרגה.
+- השורש: `excludedPages` כוללת החרגות מסוג `explicit-special-page-role` לצד `chapter-end` ו-`document-end`. רק הסוג הראשון מחייב `specialPageType` ו-`pageClass`; בשאר הסוגים שני השדות נשמרים כ-`null`. הבדיקה דרשה מחרוזות בכל הרשומות ולכן דחתה רשומות תקינות.
+- תיקון: כל הרשומות עדיין חייבות `pageIdx` שלם ו-`reason` מסוג מחרוזת; הסוג המיוחד חייב לכלול את שני שדות הסוג/מחלקה כמחרוזות, וסיבות אחרות חייבות להשאירם null/חסרים. הודעת הכשל תציג עד 10 דוגמאות פגומות כדי לשפר שקיפות סיבתית אם החוזה יופר שוב.
+- אין שינוי במנוע העימוד או בכללי הכיסוי. טרם מאומת עד שה־CI ירוץ מחדש ויעבור על שתי תצורות המסמך המלא.
