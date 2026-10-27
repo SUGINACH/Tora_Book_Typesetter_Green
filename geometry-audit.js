@@ -1787,30 +1787,29 @@ function auditSparsePage(page, issues) {
     if (!(flowRect.height > 0)) return { checked: false, reason: 'zero-body-flow' };
 
     const heading2Selector = '.title-level-2-standalone';
+    const heading1Selector = '.title-level-1-standalone, .main-shaar-page, .sub-shaar-page';
     const nextPage = pageIndex >= 0 ? pageEls[pageIndex + 1] : null;
 
-    // Chapter boundaries are structural, not ornament-dependent. H2 is a forced
-    // page-start in this engine; decorative spacing above it can move its DOM box
-    // below a fixed percentage threshold, so do not infer the boundary from Y alone.
-    // Also look through one explicitly blank page: chapter-end pages may be followed
-    // by a deliberate verso/recto blank before the next chapter begins.
+    // Chapter/section end is defined by the next structural boundary, not by
+    // ornament presence or the vertical position of a heading. Accept H2, H1
+    // (including the sub-shaar title-page role), or document end. A deliberate
+    // blank page may intervene before H1/H2.
     const nextIsIntentionalBlank = !!nextPage?.classList.contains('blank-page');
-    const chapterStartPage = nextIsIntentionalBlank && pageIndex >= 0
+    const boundaryPage = nextIsIntentionalBlank && pageIndex >= 0
         ? pageEls[pageIndex + 2]
         : nextPage;
-    const chapterStartFlow = chapterStartPage?.querySelector('.page-body-flow');
-    const chapterStartHeading = chapterStartPage?.querySelector(heading2Selector);
-    const chapterStartFlowRect = chapterStartFlow?.getBoundingClientRect();
-    const chapterStartHeadingRect = chapterStartHeading?.getBoundingClientRect();
     const nextPageStartsChapter = !!(
-        chapterStartHeadingRect && chapterStartFlowRect && chapterStartFlowRect.height > 0 &&
-        chapterStartHeadingRect.bottom > chapterStartFlowRect.top &&
-        chapterStartHeadingRect.top < chapterStartFlowRect.bottom
+        boundaryPage && (
+            boundaryPage.querySelector(heading2Selector) ||
+            boundaryPage.querySelector(heading1Selector) ||
+            boundaryPage.classList.contains('main-shaar-page') ||
+            boundaryPage.classList.contains('sub-shaar-page')
+        )
     );
+    const isDocumentEnd = pageIndex >= 0 && pageIndex === pageEls.length - 1;
 
-    // A page immediately preceding the next chapter is an intentional chapter-end
-    // page; sparse-page is not an error there, irrespective of balance/fill policy.
     if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
+    if (isDocumentEnd) return { checked: true, excluded: 'document-end' };
 
     // Chapter-end sparsity depends on the explicit balance/fill policy.
     const chapterEndBalanceMode = document.getElementById('balance-chapter-end')?.value || 'balance';
