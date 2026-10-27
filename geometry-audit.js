@@ -1650,7 +1650,10 @@ function auditContainerGaps(page, issues) {
             computedLayout: computedLayout(bodyFlow)
         },
         hasSectionDivider: !!pageEl.querySelector('.sec-divider-wrap'),
-        lastTextElement: describeElement(last.el, last.rect),
+        lastTextElement: {
+            ...describeElement(last.el, last.rect),
+            computedLayout: computedLayout(last.el)
+        },
         lastTextComputedLayout: computedLayout(last.el),
         lastTextAncestorChain: ancestorChain,
         currentBodyFlowChildren: directStructure(bodyFlow),

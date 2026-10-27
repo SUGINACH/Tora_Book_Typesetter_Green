@@ -276,9 +276,9 @@ jobs:
               typeof node.computedLayout.boxSizing === 'string' &&
               typeof node.computedLayout.width === 'string' &&
               typeof node.computedLayout.height === 'string';
-            const isMeasuredNode = node => hasFiniteRect(node) &&
-              typeof node.tag === 'string' && typeof node.className === 'string' &&
-              hasComputedLayout(node);
+            const isMeasuredRectNode = node => hasFiniteRect(node) &&
+              typeof node.tag === 'string' && typeof node.className === 'string';
+            const isMeasuredNode = node => isMeasuredRectNode(node) && hasComputedLayout(node);
             const isMeasuredColumn = column => isMeasuredNode(column) &&
               Number.isInteger(column.visibleTextElementCount) &&
               column.visibleTextElementCount >= 0 &&
