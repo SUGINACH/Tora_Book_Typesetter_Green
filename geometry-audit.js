@@ -1245,82 +1245,135 @@ function auditWidowOrphan(node, issues) {
 }
 
 function auditSparseLastLine(node, issues) {
-    // Only p-cut fragments are checked: a cut paragraph should not end with
-    // an unusually short line because its next line did not fit.
+    // p-cut fragments are justified, so line width is not a reliable sparsity
+    // signal: stretched inter-word spaces can make a nearly empty line full-width.
+    // Detect unusually wide gaps on the final line relative to ordinary lines
+    // in the same fragment. A single-word line has no inter-word gaps to measure.
     if (node.type === 'p-cut' && node.lines.length > 1) {
         const lastLine = node.lines[node.lines.length - 1];
-        const firstLine = node.lines[0];
-        if (firstLine.w > 0 && lastLine.w < firstLine.w * TOL.sparseLastLine) {
-            // Parenthetical text is intentionally set smaller and can look sparse
-            // while still carrying a full line of content.
-            const el = _nodeToEl.get(node);
-            let hasParenOnLastLine = false;
-            if (el) {
-                const parenSpans = el.querySelectorAll('.paren-text');
-                const lastLineTop = Math.round(lastLine.y);
-                for (const span of parenSpans) {
-                    const sr = span.getBoundingClientRect();
-                    const off = getBookContainerOffset();
-                    const spanTop = Math.round(sr.top - off.y);
-                    if (Math.abs(spanTop - lastLineTop) < 8) {
-                        hasParenOnLastLine = true;
-                        break;
-                    }
+        const el = _nodeToEl.get(node);
+        const off = getBookContainerOffset();
+
+        // Preserve the existing parenthetical-text exception: reduced-size
+        // parenthetical runs can distort apparent gap widths on that line.
+        let hasParenOnLastLine = false;
+        if (el) {
+            for (const span of el.querySelectorAll('.paren-text')) {
+                const sr = span.getBoundingClientRect();
+                const spanTop = Math.round(sr.top - off.y);
+                if (Math.abs(spanTop - Math.round(lastLine.y)) < 8) {
+                    hasParenOnLastLine = true;
+                    break;
                 }
             }
-            if (!hasParenOnLastLine) {
-                const balanceBlock = _nodeToEl.get(node)?.closest('.block-2col') || null;
-                const balanceFallback = balanceBlock?.getAttribute('data-layout-balance-fallback') || null;
-                const balanceFallbackSparseLine = balanceBlock?.getAttribute('data-layout-balance-fallback-sparse-line') || null;
-                const lineTokens = line => (Array.isArray(node.words) ? node.words : [])
-                    .filter(token => Math.abs(token.y - line.y) < Math.max(4, line.h * 0.35))
-                    .sort((a, b) => a.idx - b.idx)
-                    .map(token => ({
-                        text: token.text,
-                        type: token.type,
-                        x: Math.round(token.x * 100) / 100,
-                        width: Math.round(token.w * 100) / 100
-                    }));
-                const compactLine = line => {
-                    const tokens = lineTokens(line);
-                    return {
-                        y: Math.round(line.y * 100) / 100,
-                        width: Math.round(line.w * 100) / 100,
-                        height: Math.round(line.h * 100) / 100,
-                        text: tokens.map(token => token.text).join('').slice(0, 240),
-                        tokens: tokens.slice(0, 40)
-                    };
-                };
-                const splitAttr = name => el?.getAttribute(name) ?? null;
-                const cs = el ? getComputedStyle(el) : null;
-                issues.push({
-                    kind: 'sparse-line',
-                    severity: 'low',
-                    pageIdx: getPageIdx(node),
-                    location: describePath(node),
-                    lastW: Math.round(lastLine.w),
-                    firstW: Math.round(firstLine.w),
-                    pText: node.text,
-                    firstLine: compactLine(firstLine),
-                    lastLine: compactLine(lastLine),
-                    splitDiagnostics: {
-                        inputLines: splitAttr('data-layout-split-input-lines'),
-                        fitLines: splitAttr('data-layout-split-fit-lines'),
-                        placedLines: splitAttr('data-layout-split-placed-lines'),
-                        minFirst: splitAttr('data-layout-split-min-first'),
-                        minLast: splitAttr('data-layout-split-min-last'),
-                        insideParen: splitAttr('data-layout-split-inside-paren'),
-                        fontSize: cs?.fontSize ?? null,
-                        lineHeight: cs?.lineHeight ?? null,
-                        textAlignLast: cs?.textAlignLast ?? null
-                    },
-                    childRect: { x: Math.round(lastLine.x), y: Math.round(lastLine.y), w: Math.round(lastLine.w), h: Math.round(lastLine.h) },
-                    message: `שורה דלילה בסוף p-cut: רוחב אחרון=${Math.round(lastLine.w)}px ראשון=${Math.round(firstLine.w)}px`
-                });
-            }
+        }
+
+        const tokensForLine = line => (Array.isArray(node.words) ? node.words : [])
+            .filter(token => Math.abs(token.y - line.y) < Math.max(4, line.h * 0.35))
+            .sort((a, b) => a.idx - b.idx);
+        const median = values => {
+            if (!values.length) return null;
+            const sorted = [...values].sort((a, b) => a - b);
+            const middle = Math.floor(sorted.length / 2);
+            return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+        };
+        const lineMetrics = line => {
+            const tokens = tokensForLine(line);
+            const words = tokens.filter(token => token.type === 'word');
+            const spaces = tokens.filter(token => token.type === 'space' && token.w > 0);
+            const wordWidth = words.reduce((sum, token) => sum + token.w, 0);
+            const spaceWidths = spaces.map(token => token.w);
+            return {
+                tokens, words, spaces,
+                wordCount: words.length,
+                gapCount: spaceWidths.length,
+                wordWidth,
+                spaceWidth: spaceWidths.reduce((sum, width) => sum + width, 0),
+                medianGap: median(spaceWidths),
+                maxGap: spaceWidths.length ? Math.max(...spaceWidths) : 0,
+                gapWidths: spaceWidths
+            };
+        };
+
+        const last = lineMetrics(lastLine);
+        const comparisonLines = node.lines.slice(0, -1)
+            .map(lineMetrics)
+            .filter(metrics => metrics.wordCount >= 2 && metrics.gapCount >= 1 && metrics.medianGap > 0);
+        const baselineMedianGap = median(comparisonLines.map(metrics => metrics.medianGap));
+        const baselineMaxGap = median(comparisonLines.map(metrics => metrics.maxGap));
+
+        // Require at least two words (otherwise there is no inter-word spacing)
+        // and compare against the same paragraph's own normal justified spacing.
+        const medianGapRatio = baselineMedianGap > 0 && last.medianGap !== null
+            ? last.medianGap / baselineMedianGap : null;
+        const maxGapRatio = baselineMaxGap > 0 && last.maxGap > 0
+            ? last.maxGap / baselineMaxGap : null;
+        const hasEnoughEvidence = last.wordCount >= 2 && last.gapCount >= 1 && baselineMedianGap > 0;
+        const unusuallyWideGaps = hasEnoughEvidence &&
+            ((medianGapRatio >= 1.8 && last.spaceWidth / Math.max(1, last.wordWidth + last.spaceWidth) >= 0.20) ||
+             (maxGapRatio >= 2.5 && last.maxGap >= baselineMedianGap * 2));
+
+        if (!hasParenOnLastLine && unusuallyWideGaps) {
+            const balanceBlock = el?.closest('.block-2col') || null;
+            const balanceFallback = balanceBlock?.getAttribute('data-layout-balance-fallback') || null;
+            const balanceFallbackSparseLine = balanceBlock?.getAttribute('data-layout-balance-fallback-sparse-line') || null;
+            const compactLine = (line, metrics) => ({
+                y: Math.round(line.y * 100) / 100,
+                width: Math.round(line.w * 100) / 100,
+                height: Math.round(line.h * 100) / 100,
+                text: metrics.tokens.map(token => token.text).join('').slice(0, 240),
+                wordCount: metrics.wordCount,
+                gapCount: metrics.gapCount,
+                wordWidth: Math.round(metrics.wordWidth * 100) / 100,
+                totalGapWidth: Math.round(metrics.spaceWidth * 100) / 100,
+                gapRatio: Math.round(metrics.spaceWidth / Math.max(1, metrics.wordWidth + metrics.spaceWidth) * 1000) / 1000,
+                medianGapWidth: metrics.medianGap === null ? null : Math.round(metrics.medianGap * 100) / 100,
+                maxGapWidth: Math.round(metrics.maxGap * 100) / 100,
+                gapWidths: metrics.gapWidths.map(width => Math.round(width * 100) / 100),
+                tokens: metrics.tokens.slice(0, 40).map(token => ({
+                    text: token.text,
+                    type: token.type,
+                    x: Math.round(token.x * 100) / 100,
+                    width: Math.round(token.w * 100) / 100
+                }))
+            });
+            const splitAttr = name => el?.getAttribute(name) ?? null;
+            const cs = el ? getComputedStyle(el) : null;
+            issues.push({
+                kind: 'sparse-line',
+                severity: 'low',
+                pageIdx: getPageIdx(node),
+                location: describePath(node),
+                detectionMethod: 'excessive-inter-word-spacing',
+                pText: node.text,
+                firstLine: compactLine(node.lines[0], lineMetrics(node.lines[0])),
+                lastLine: compactLine(lastLine, last),
+                spacingDiagnostics: {
+                    baselineMedianGapWidth: Math.round(baselineMedianGap * 100) / 100,
+                    baselineMedianMaxGapWidth: Math.round((baselineMaxGap || 0) * 100) / 100,
+                    medianGapRatio: medianGapRatio === null ? null : Math.round(medianGapRatio * 1000) / 1000,
+                    maxGapRatio: maxGapRatio === null ? null : Math.round(maxGapRatio * 1000) / 1000,
+                    thresholds: { medianGapRatio: 1.8, maxGapRatio: 2.5, minimumGapRatioOfLine: 0.20 },
+                    balanceFallback,
+                    balanceFallbackSparseLine
+                },
+                splitDiagnostics: {
+                    inputLines: splitAttr('data-layout-split-input-lines'),
+                    fitLines: splitAttr('data-layout-split-fit-lines'),
+                    placedLines: splitAttr('data-layout-split-placed-lines'),
+                    minFirst: splitAttr('data-layout-split-min-first'),
+                    minLast: splitAttr('data-layout-split-min-last'),
+                    insideParen: splitAttr('data-layout-split-inside-paren'),
+                    fontSize: cs?.fontSize ?? null,
+                    lineHeight: cs?.lineHeight ?? null,
+                    textAlignLast: cs?.textAlignLast ?? null
+                },
+                childRect: { x: Math.round(lastLine.x), y: Math.round(lastLine.y), w: Math.round(lastLine.w), h: Math.round(lastLine.h) },
+                message: `שורה דלילה בסוף p-cut: רווחים חריגים בין מילים; חציון רווח=${last.medianGap === null ? 'לא זמין' : Math.round(last.medianGap * 100) / 100}px, יחס לבסיס=${medianGapRatio === null ? 'לא זמין' : Math.round(medianGapRatio * 100) / 100}`
+            });
         }
     }
-    for (const c of node.children) auditSparseLastLine(c, issues);
+    for (const child of node.children) auditSparseLastLine(child, issues);
 }
 
 function auditOverflowToFootnote(page, issues) {
