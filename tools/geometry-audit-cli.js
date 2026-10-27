@@ -1373,7 +1373,23 @@ async function main() {
 
         const allIssues = Array.isArray(data.issues) ? data.issues : [];
         const traceLinksByIssueIndex = new Map((data.stageByStepAudit?.issueLinks || []).map(link => [link.issueIndex, link]));
-        allIssues.forEach((issue, index) => { issue.stepByStepTrace = traceLinksByIssueIndex.get(index) || { traceAvailable:false, reason:'issue-trace-link-missing' }; });
+        allIssues.forEach((issue, index) => {
+            const linkedTrace = traceLinksByIssueIndex.get(index);
+            // Make deliberate trace suppression distinguishable from an instrumentation defect.
+            if (linkedTrace && linkedTrace.traceAvailable === false &&
+                linkedTrace.reason === 'no-trace-for-page' && args.stepAuditDisabled) {
+                issue.stepByStepTrace = {
+                    ...linkedTrace,
+                    reason: 'step-audit-disabled-by-request',
+                    detail: 'Full-document workflow disables step tracing to keep Chromium stable; use a targeted trace run for causal event history.'
+                };
+            } else {
+                issue.stepByStepTrace = linkedTrace || {
+                    traceAvailable:false,
+                    reason: args.stepAuditDisabled ? 'step-audit-disabled-by-request' : 'issue-trace-link-missing'
+                };
+            }
+        });
         // Keep gate-policy diagnostics available in every report, even when the active
         // geometry gate is disabled for a baseline or smoke run.
         const isDocumentedNoteMarkerRounding = issue =>
@@ -1588,7 +1604,7 @@ async function main() {
             run:{ input:path.relative(root,inputPath).split(path.sep).join('/'), inputBytes:Buffer.byteLength(inputText,'utf8'),
               generatedAt:new Date().toISOString(), branch:process.env.GITHUB_REF_NAME || null,
               gitCommit:process.env.GITHUB_SHA || null, viewport:{width:args.viewportWidth,height:args.viewportHeight,deviceScaleFactor:1},
-              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, browser:'Chromium headless' },
+              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, stepAudit:{enabled:!args.stepAuditDisabled, disabledByRequest:args.stepAuditDisabled, disableReason:args.stepAuditDisabled?'full-document-stability-policy':null, maxEvents:args.stepAuditMaxEvents, maxElements:args.stepAuditMaxElements, textChars:args.stepAuditTextChars, includeLineRects:!args.stepAuditNoLineRects, includeComputedStyle:!args.stepAuditNoComputedStyle}, browser:'Chromium headless' },
             pageCount:data.pageCount,
             geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,stepByStepAudit:data.stageByStepAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
             audit:{summary:data.summary,issues:data.issues,checks:data.checks},
