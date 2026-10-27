@@ -1572,6 +1572,41 @@ function auditContainerGaps(page, issues) {
         return { checked: true, gapPx, hasVisibleFootnotes };
     }
     const severity = gapPx > CONTAINER_GAP_MEDIUM_PX ? 'medium' : 'low';
+    const describeElement = (el, rect, originTop = flowRect.top) => el ? ({
+        tag: String(el.tagName || '').toLowerCase(),
+        className: String(el.className || '').toString().trim().slice(0, 180),
+        textLength: String(el.getAttribute?.('data-raw-text') || el.textContent || '').trim().length,
+        topFromFlowPx: rect ? Math.round((rect.top - originTop) * 100) / 100 : null,
+        bottomFromFlowPx: rect ? Math.round((rect.bottom - originTop) * 100) / 100 : null
+    }) : null;
+    const ancestorChain = [];
+    for (let el = last.el, depth = 0; el && el !== bodyFlow && depth < 5; el = el.parentElement, depth++) {
+        ancestorChain.push({
+            tag: String(el.tagName || '').toLowerCase(),
+            className: String(el.className || '').toString().trim().slice(0, 180)
+        });
+    }
+    const directStructure = container => container ? Array.from(container.children).slice(0, 12).map(el =>
+        describeElement(el, el.getBoundingClientRect(), container.getBoundingClientRect().top)) : [];
+    const nextPageHeading = nextPage?.querySelector('.title-level-2-standalone');
+    const gapContext = {
+        contextSchemaVersion: 1,
+        currentPageClass: String(pageEl.className || '').toString(),
+        hasSectionDivider: !!pageEl.querySelector('.sec-divider-wrap'),
+        lastTextElement: describeElement(last.el, last.rect),
+        lastTextAncestorChain: ancestorChain,
+        currentBodyFlowChildren: directStructure(bodyFlow),
+        nextPage: nextPage ? {
+            pageClass: String(nextPage.className || '').toString(),
+            hasBodyFlow: !!nextFlow,
+            startsChapterByCurrentRule: nextPageStartsChapter,
+            heading2Text: nextPageHeading
+                ? String(nextPageHeading.getAttribute('data-raw-text') || nextPageHeading.textContent || '')
+                    .replace(/\s+/g, ' ').trim().slice(0, 160)
+                : null,
+            bodyFlowChildren: directStructure(nextFlow)
+        } : null
+    };
     issues.push({
         kind: 'container-gap',
         severity,
@@ -1590,6 +1625,7 @@ function auditContainerGaps(page, issues) {
         visibleTextElementCount: visibleText.length,
         lastTextPreview: String(last.el.getAttribute('data-raw-text') || last.el.textContent || '')
             .replace(/\s+/g, ' ').trim().slice(-180),
+        gapContext,
         message: `פער אנכי של ${Math.round(gapPx)}px בין סוף טקסט הגוף ל-${hasVisibleFootnotes ? 'אזור הערות השוליים' : 'תחתית אזור הגוף'} בעמוד ${page.label}`
     });
     return { checked: true, gapPx, hasVisibleFootnotes, finding: true };
