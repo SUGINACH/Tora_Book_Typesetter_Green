@@ -936,3 +936,13 @@ V23 בלבד; אין מיזוג ל-V21.
 - [ ] לתעד תוצאות CI והכרעת כל ממצא לפני מעבר לסוגי הממצאים הבאים. עמוד 376 מושהה; V23 בלבד.
 
 V23 בלבד; אין למזג ל-V21.
+
+
+## P0 — יצירת גבול מבני אמיתי ב-fixture של סוף-חלק (2026-10-27)
+
+- [x] לזהות מדוע שער `section-end-boundary` נכשל: ה-fixture לא יצר `.sub-shaar-page` ולכן לא היו ראיות גבול.
+- [x] להוסיף `mode-h1: sub_shaar` ל-`tests/fixtures/section-end-fill-settings.json`; לשמור על `balance-chapter-end: fill`.
+- [ ] לוודא ב-CI שהדוח כולל boundaryPageIndex/class ממשיים, ושהחרגות sparse-page ו-container-gap נשמרות בלי ממצאים פעילים באותם אינדקסים.
+- [ ] אם עדיין אין גבול, לבדוק את יצירת העמוד ב-typesetter וב-fixture במקום להחליש את השער.
+
+V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
