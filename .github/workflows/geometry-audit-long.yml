@@ -41,6 +41,8 @@ jobs:
         run: node --check tools/geometry-audit-cli.js
       - name: Install dependencies
         run: npm install
+      - name: Syntax-check screenshot PDF builder
+        run: python -m py_compile tools/build_layout_issue_screenshot_report.py
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Verify long input

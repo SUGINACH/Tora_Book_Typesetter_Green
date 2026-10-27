@@ -142,7 +142,7 @@ async function captureIssueScreenshots(page, data, args) {
         screenshotCount: screenshots.length, screenshots
     };
     fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
-    process.stdout.write('Rendered issue screenshots: ' + screenshots.length + '; configuration=' + args.screenshotLabel + '; deferred indexes omitted=375,376\\n');
+    process.stdout.write('Rendered issue screenshots: ' + screenshots.length + '; configuration=' + args.screenshotLabel + '; deferred indexes omitted=375,376\n');
     return { configuration: args.screenshotLabel, screenshotCount: screenshots.length,
         manifestPath: path.relative(root, path.join(outDir,'manifest.json')).split(path.sep).join('/'),
         issueKinds: manifest.issueKindsInAudit };
