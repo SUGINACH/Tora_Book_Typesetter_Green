@@ -1869,13 +1869,13 @@ function auditSparsePage(page, issues) {
     const hasTerminalSectionDivider = !!bodyFlow.lastElementChild?.classList.contains('sec-divider-wrap');
     const interveningBlankPage = !!nextPage?.classList.contains('blank-page');
     const followingPage = interveningBlankPage ? pageEls[pageIndex + 2] : null;
-    const boundaryPage = nextPage?.classList.contains('sub-shaar-page') ? nextPage
+    const sectionBoundaryPage = nextPage?.classList.contains('sub-shaar-page') ? nextPage
         : (interveningBlankPage && followingPage?.classList.contains('sub-shaar-page') ? followingPage : null);
-    const isChapterEnd = hasTerminalSectionDivider && !!boundaryPage;
+    const isChapterEnd = hasTerminalSectionDivider && !!sectionBoundaryPage;
     if (isChapterEnd && chapterEndBalanceMode === 'fill') {
         return { checked: true, excluded: 'section-end-before-divider', specialPageType: 'section-divider-page',
-            chapterEndBalanceMode, hasTerminalSectionDivider, boundaryPageIndex: pageEls.indexOf(boundaryPage),
-            boundaryPageClass: String(boundaryPage.className || ''),
+            chapterEndBalanceMode, hasTerminalSectionDivider, boundaryPageIndex: pageEls.indexOf(sectionBoundaryPage),
+            boundaryPageClass: String(sectionBoundaryPage.className || ''),
             interveningBlankPageClass: interveningBlankPage ? String(nextPage.className || '') : null };
     }
 
