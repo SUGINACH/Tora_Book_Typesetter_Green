@@ -255,6 +255,45 @@ jobs:
             enclosingParenthesisContinuation: 'PASS'
           }));
           NODE
+      - name: Run section-end boundary audit fixture
+        run: node tools/geometry-audit-cli.js --input ./tests/fixtures/section-end-gap-audit.txt --report ./artifacts/section-end-gap-report.json --summary ./artifacts/section-end-gap-summary.md --fail-on none
+      - name: Assert section-end boundary exclusions remain explicit
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('./artifacts/section-end-gap-report.json', 'utf8'));
+          const audit = report.audit || {};
+          const sparse = audit.checks?.sparsePage;
+          const gaps = audit.checks?.containerGap;
+          if (!sparse || !gaps) {
+            console.error('Both sparse-page and container-gap coverage ledgers must be present:', audit.checks);
+            process.exit(1);
+          }
+          const sectionEndSparse = (sparse.excludedPages || []).filter(item => item.reason === 'section-end-before-divider');
+          const sectionEndGaps = (gaps.excludedPages || []).filter(item => item.reason === 'section-end-before-divider');
+          if (!sectionEndSparse.length || !sectionEndGaps.length) {
+            console.error('The explicit terminal section divider must be classified in both audits:', {
+              sparsePage: sparse.excludedPages,
+              containerGap: gaps.excludedPages,
+              issues: audit.issues
+            });
+            process.exit(1);
+          }
+          const sparsePageIndexes = new Set(sectionEndSparse.map(item => item.pageIdx));
+          const gapPageIndexes = new Set(sectionEndGaps.map(item => item.pageIdx));
+          const wronglyReported = (audit.issues || []).filter(issue =>
+            (issue.kind === 'sparse-page' && sparsePageIndexes.has(issue.pageIdx)) ||
+            (issue.kind === 'container-gap' && gapPageIndexes.has(issue.pageIdx)));
+          if (wronglyReported.length) {
+            console.error('Section-end exclusions must not simultaneously remain as sparse-page/container-gap findings:', wronglyReported);
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            sectionEndSparseExclusions: sectionEndSparse.length,
+            sectionEndContainerGapExclusions: sectionEndGaps.length,
+            explicitBoundaryClassification: 'PASS'
+          }));
+          NODE
       - name: Run active-ornament geometry smoke test
         run: node tools/geometry-audit-cli.js --input ./tests/fixtures/ornament-geometry-smoke.txt --settings ./tests/fixtures/ornament-geometry-settings.json --report ./artifacts/ornament-smoke-report.json --summary ./artifacts/ornament-smoke-summary.md --fail-on none --require-geometry-features
       - name: Assert active geometry gate policy is explicit

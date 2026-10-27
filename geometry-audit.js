@@ -1528,6 +1528,21 @@ function auditContainerGaps(page, issues) {
         nextHeadingRect.top < nextFlowRect.top + nextFlowRect.height * 0.45
     );
     if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
+    // A real section-divider page is an explicit structural boundary. When the
+    // current page also carries the renderer's terminal divider, whitespace below
+    // the text is not evidence of an accidental gap within a continuing section.
+    const nextPageIsSectionBoundary = !!(
+        nextPage?.classList.contains('sub-shaar-page') &&
+        bodyFlow.querySelector('.sec-divider-wrap')
+    );
+    if (nextPageIsSectionBoundary) {
+        return {
+            checked: true,
+            excluded: 'section-end-before-divider',
+            specialPageType: 'section-divider-page',
+            boundaryPageClass: String(nextPage.className || '')
+        };
+    }
     if (pageIndex >= 0 && pageIndex === pageEls.length - 1) {
         return { checked: true, excluded: 'document-end' };
     }
@@ -1694,15 +1709,15 @@ function auditContainerGaps(page, issues) {
 
 function auditSparsePage(page, issues) {
     const pageEl = _nodeToEl && _nodeToEl.get(page);
-    if (!pageEl) return;
+    if (!pageEl) return { checked: false, reason: 'missing-page-element' };
 
     const pageEls = Array.from(document.querySelectorAll('#book-container .a4-page'));
     const pageIndex = pageEls.indexOf(pageEl);
     const bodyFlow = pageEl.querySelector('.page-body-flow');
-    if (!bodyFlow) return;
+    if (!bodyFlow) return { checked: false, reason: 'missing-body-flow' };
 
     const flowRect = bodyFlow.getBoundingClientRect();
-    if (!(flowRect.height > 0)) return;
+    if (!(flowRect.height > 0)) return { checked: false, reason: 'zero-body-flow' };
 
     const heading2Selector = '.title-level-2-standalone';
     const nextPage = pageIndex >= 0 ? pageEls[pageIndex + 1] : null;
@@ -1716,7 +1731,22 @@ function auditSparsePage(page, issues) {
     );
 
     // סוף פרק: כותרת 2 בראש העמוד הבא מעידה שהעמוד הנוכחי מסתיים לפני פרק חדש.
-    if (nextPageStartsChapter) return;
+    if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
+
+    // Match the container-gap rule: only exempt an explicit sub-shaar page when
+    // the current body flow contains the renderer's terminal section divider.
+    const nextPageIsSectionBoundary = !!(
+        nextPage?.classList.contains('sub-shaar-page') &&
+        bodyFlow.querySelector('.sec-divider-wrap')
+    );
+    if (nextPageIsSectionBoundary) {
+        return {
+            checked: true,
+            excluded: 'section-end-before-divider',
+            specialPageType: 'section-divider-page',
+            boundaryPageClass: String(nextPage.className || '')
+        };
+    }
 
     const heading2 = pageEl.querySelector(heading2Selector);
     const headingRect = heading2?.getBoundingClientRect();
@@ -1733,7 +1763,7 @@ function auditSparsePage(page, issues) {
     const hasTwoColumnBlock = !!bodyFlow.querySelector('.block-2col');
     const columnCapacityMultiplier = hasTwoColumnBlock ? 2 : 1;
     const capacityPx = Math.max(0, flowRect.bottom - contentStartY) * columnCapacityMultiplier;
-    if (!(capacityPx > 0)) return;
+    if (!(capacityPx > 0)) return { checked: false, reason: 'zero-capacity' };
     const referenceColumn = bodyFlow.querySelector('.main-column') || bodyFlow.querySelector('.single-wide-col');
     const referenceColumnWidth = referenceColumn?.getBoundingClientRect().width || 0;
 
@@ -1779,13 +1809,13 @@ function auditSparsePage(page, issues) {
     }
     // Heading-only pages still have content and must be eligible for sparse-page
     // diagnostics; paragraphCount is retained as a report metric, not a gate.
-    if (contentElementCount === 0 || !Number.isFinite(lastTextBottom)) return;
+    if (contentElementCount === 0 || !Number.isFinite(lastTextBottom)) return { checked: true, excluded: 'no-visible-text' };
 
     // גובהי פסקאות נמדדים בנפרד לכל טור; היחס אינו "אחוז דיו" אלא אומדן
     // שמרני של תפוסת שטח העימוד. הסף נמוך בכוונה כדי למנוע התרעות שווא.
     const fillRatio = occupiedPx / capacityPx;
     const roundedRatio = Math.round(fillRatio * 1000) / 1000;
-    if (fillRatio >= 0.24) return;
+    if (fillRatio >= 0.24) return { checked: true, finding: false, fillRatio: roundedRatio };
 
     const severity = fillRatio < 0.12 ? 'medium' : 'low';
     issues.push({
@@ -1847,6 +1877,7 @@ function auditSparsePage(page, issues) {
         })),
         message: `תפוסת טקסט נמוכה בעמוד ${page.label}: ${Math.round(fillRatio * 100)}% מהקיבולת המשוערת${startsChapter ? ' (כותרת תחילת הפרק הוחרגה מהחישוב)' : ''}`
     });
+    return { checked: true, finding: true, fillRatio: roundedRatio };
 }
 
 /* בדיקת טווחי סוגריים מרובעים במקור, לפני שמסתמכים על ה-DOM המעוצב.
@@ -1992,6 +2023,12 @@ function auditSquareBracketScopes(issues) {
 /* הפעלת כל הבדיקות */
 function auditGeometry(model) {
     const issues = [];
+    let sparsePagePagesEvaluated = 0;
+    let sparsePagePagesExcluded = 0;
+    const sparsePageExcludedReasons = {};
+    const sparsePageExcludedPages = [];
+    const sparsePageNotEvaluatedReasons = {};
+    const sparsePageNotEvaluatedPages = [];
     let containerGapPagesEvaluated = 0;
     let containerGapPagesExcluded = 0;
     const containerGapExcludedReasons = {};
@@ -2011,7 +2048,34 @@ function auditGeometry(model) {
             auditWidowOrphan(c, issues);
             auditSparseLastLine(c, issues);
         }
-        auditSparsePage(page, issues);
+        const sparsePageCheck = auditSparsePage(page, issues);
+        if (sparsePageCheck && sparsePageCheck.checked && sparsePageCheck.excluded) {
+            sparsePagePagesExcluded++;
+            const reason = sparsePageCheck.excluded;
+            sparsePageExcludedReasons[reason] = (sparsePageExcludedReasons[reason] || 0) + 1;
+            const pageEl = _nodeToEl && _nodeToEl.get(page);
+            const pageEls = Array.from(document.querySelectorAll('#book-container .a4-page'));
+            sparsePageExcludedPages.push({
+                pageIdx: page.idx,
+                pageLabel: page.label,
+                reason,
+                specialPageType: sparsePageCheck.specialPageType || null,
+                domPageIndex: pageEl ? pageEls.indexOf(pageEl) : -1,
+                boundaryPageClass: sparsePageCheck.boundaryPageClass || null
+            });
+        } else if (sparsePageCheck && sparsePageCheck.checked) {
+            sparsePagePagesEvaluated++;
+        } else {
+            const reason = sparsePageCheck?.reason || 'unknown-unchecked-reason';
+            sparsePageNotEvaluatedReasons[reason] = (sparsePageNotEvaluatedReasons[reason] || 0) + 1;
+            const pageEl = _nodeToEl && _nodeToEl.get(page);
+            sparsePageNotEvaluatedPages.push({
+                pageIdx: page.idx,
+                pageLabel: page.label,
+                reason,
+                pageClass: pageEl ? String(pageEl.className || '') : null
+            });
+        }
         const containerGapCheck = auditContainerGaps(page, issues);
         if (containerGapCheck && containerGapCheck.checked && containerGapCheck.excluded) {
             containerGapPagesExcluded++;
@@ -2022,7 +2086,8 @@ function auditGeometry(model) {
                 pageLabel: page.label,
                 reason,
                 specialPageType: containerGapCheck.specialPageType || null,
-                pageClass: containerGapCheck.pageClass || null
+                pageClass: containerGapCheck.pageClass || null,
+                boundaryPageClass: containerGapCheck.boundaryPageClass || null
             });
         } else if (containerGapCheck && containerGapCheck.checked) {
             containerGapPagesEvaluated++;
@@ -2081,6 +2146,22 @@ function auditGeometry(model) {
         issues,
         summary,
         checks: {
+            sparsePage: {
+                version: 1,
+                enabled: true,
+                pageCount: model.pages.length,
+                pagesEvaluated: sparsePagePagesEvaluated,
+                pagesExcluded: sparsePagePagesExcluded,
+                excludedReasons: sparsePageExcludedReasons,
+                excludedPages: sparsePageExcludedPages,
+                pagesNotEvaluated: model.pages.length - sparsePagePagesEvaluated - sparsePagePagesExcluded,
+                notEvaluatedReasons: sparsePageNotEvaluatedReasons,
+                notEvaluatedPages: sparsePageNotEvaluatedPages,
+                coverageComplete: sparsePagePagesEvaluated + sparsePagePagesExcluded === model.pages.length,
+                warningFillRatio: 0.24,
+                mediumFillRatio: 0.12,
+                findingCount: issues.filter(issue => issue.kind === 'sparse-page').length
+            },
             containerGap: {
                 version: 1,
                 enabled: true,
