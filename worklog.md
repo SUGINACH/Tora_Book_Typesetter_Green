@@ -3717,3 +3717,10 @@ The latest 601-page deterministic audit (commit `48bddf07784866bc85d5a65b520f0dc
 - תיקון מבודד ב-`tests/fixtures/section-end-fill-settings.json`: הגדרה מפורשת של `mode-h1: sub_shaar` לצד `balance-chapter-end: fill`, כדי שה-fixture יגדיר את מדיניות הכותרת שדרושה ליצירת הגבול בפועל. לא שונתה בדיקת ה-gate, לא הורחבה החרגה, ולא שונה מנוע העימוד.
 - Commit: `b6542bffd960e5fbb4b89baca09c84f3161bd2bb`. בדיקת הצלחה ממתינה לריצת CI; אין להסיק שה-fixture תקין עד שהדוח מוכיח `boundaryPageIndex` ו-`boundaryPageClass=sub-shaar-page` ואת שתי רשומות ההחרגה.
 - V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
+
+
+## 2026-10-27 — המשך אבחון fixture גבול סוף-חלק
+
+- בדיקת CI אחרי הגדרת `mode-h1: sub_shaar` עדיין נכשלה: הדוח הצביע על `pageClass: null`, `boundaryPageIndex: null`; בנוסף, נוצרו עמודי תוכן/עמודי גוף נוספים שזיהמו את fixture הקטן.
+- ה-fixture מבודד כעת מתוכן עניינים ושערים (`show-main-shaar=false`, `show-back-shaar=false`, `enable-general-toc=false`, `enable-detailed-toc=false`), תוך השארת `show-sub-shaar=true` ו-`sub-shaar-count-numbering=true`, כדי לבודד את הגבול המבני האמיתי. התיקון עדיין ממתין לאימות CI; אין להחליש את השער.
+- Commit fixture: `df066ce0d78bf3ac5da1c19264f8d5b3131789f3`. V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
