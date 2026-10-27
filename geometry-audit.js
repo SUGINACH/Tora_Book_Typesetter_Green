@@ -1572,28 +1572,86 @@ function auditContainerGaps(page, issues) {
         return { checked: true, gapPx, hasVisibleFootnotes };
     }
     const severity = gapPx > CONTAINER_GAP_MEDIUM_PX ? 'medium' : 'low';
-    const describeElement = (el, rect, originTop = flowRect.top) => el ? ({
+    const roundPx = value => Number.isFinite(value) ? Math.round(value * 100) / 100 : null;
+    const describeElement = (el, rect, originTop = flowRect.top, originLeft = flowRect.left) => el ? ({
         tag: String(el.tagName || '').toLowerCase(),
         className: String(el.className || '').toString().trim().slice(0, 180),
         textLength: String(el.getAttribute?.('data-raw-text') || el.textContent || '').trim().length,
-        topFromFlowPx: rect ? Math.round((rect.top - originTop) * 100) / 100 : null,
-        bottomFromFlowPx: rect ? Math.round((rect.bottom - originTop) * 100) / 100 : null
+        leftFromFlowPx: rect ? roundPx(rect.left - originLeft) : null,
+        rightFromFlowPx: rect ? roundPx(rect.right - originLeft) : null,
+        topFromFlowPx: rect ? roundPx(rect.top - originTop) : null,
+        bottomFromFlowPx: rect ? roundPx(rect.bottom - originTop) : null,
+        widthPx: rect ? roundPx(rect.width) : null,
+        heightPx: rect ? roundPx(rect.height) : null
     }) : null;
+    const computedLayout = el => {
+        if (!el) return null;
+        const style = window.getComputedStyle(el);
+        return {
+            display: style.display,
+            position: style.position,
+            boxSizing: style.boxSizing,
+            width: style.width,
+            height: style.height,
+            minHeight: style.minHeight,
+            maxHeight: style.maxHeight,
+            flex: style.flex,
+            flexDirection: style.flexDirection,
+            gridTemplateColumns: style.gridTemplateColumns,
+            columnCount: style.columnCount,
+            gap: style.gap,
+            marginTop: style.marginTop,
+            marginBottom: style.marginBottom,
+            paddingTop: style.paddingTop,
+            paddingBottom: style.paddingBottom,
+            alignItems: style.alignItems,
+            justifyContent: style.justifyContent,
+            overflow: style.overflow
+        };
+    };
     const ancestorChain = [];
     for (let el = last.el, depth = 0; el && el !== bodyFlow && depth < 5; el = el.parentElement, depth++) {
+        const rect = el.getBoundingClientRect();
         ancestorChain.push({
-            tag: String(el.tagName || '').toLowerCase(),
-            className: String(el.className || '').toString().trim().slice(0, 180)
+            ...describeElement(el, rect),
+            computedLayout: computedLayout(el)
         });
     }
-    const directStructure = container => container ? Array.from(container.children).slice(0, 12).map(el =>
-        describeElement(el, el.getBoundingClientRect(), container.getBoundingClientRect().top)) : [];
+    const directStructure = container => {
+        if (!container) return [];
+        const containerRect = container.getBoundingClientRect();
+        return Array.from(container.children).slice(0, 12).map(el => {
+            const rect = el.getBoundingClientRect();
+            const item = describeElement(el, rect, containerRect.top, containerRect.left);
+            item.computedLayout = computedLayout(el);
+            item.columns = Array.from(el.querySelectorAll('.main-column, .single-wide-col')).slice(0, 4).map(column => {
+                const columnRect = column.getBoundingClientRect();
+                const textNodes = Array.from(column.querySelectorAll('p, .title-level-2-standalone, .title-level-3, .title-level-4, .title-level-5, .title-level-6, .title-level-7, .title-level-custom'))
+                    .map(node => ({ node, rect: node.getBoundingClientRect() }))
+                    .filter(entry => entry.rect.width > 0 && entry.rect.height > 0);
+                const lastNode = textNodes.reduce((best, entry) =>
+                    !best || entry.rect.bottom > best.rect.bottom ? entry : best, null);
+                return {
+                    ...describeElement(column, columnRect, rect.top, rect.left),
+                    computedLayout: computedLayout(column),
+                    visibleTextElementCount: textNodes.length,
+                    lastVisibleTextElement: lastNode ? describeElement(lastNode.node, lastNode.rect, rect.top, rect.left) : null
+                };
+            });
+            return item;
+        });
+    };
     const nextPageHeading = nextPage?.querySelector('.title-level-2-standalone');
     const gapContext = {
-        contextSchemaVersion: 1,
+        contextSchemaVersion: 2,
         currentPageClass: String(pageEl.className || '').toString(),
+        bodyFlow: {
+            ...describeElement(bodyFlow, flowRect),
+            computedLayout: computedLayout(bodyFlow)
+        },
         hasSectionDivider: !!pageEl.querySelector('.sec-divider-wrap'),
         lastTextElement: describeElement(last.el, last.rect),
+        lastTextComputedLayout: computedLayout(last.el),
         lastTextAncestorChain: ancestorChain,
         currentBodyFlowChildren: directStructure(bodyFlow),
         nextPage: nextPage ? {
