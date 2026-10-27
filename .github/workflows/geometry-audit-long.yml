@@ -337,6 +337,57 @@ jobs:
               geometryCoverage: check.coverageComplete ? 'COMPLETE' : 'INCOMPLETE_REQUIRES_FOLLOWUP'}));
           }
           NODE
+      - name: Run targeted causal trace for known medium imbalance
+        run: |
+          node tools/geometry-audit-cli.js \
+            --input ./very_long_test_text.txt \
+            --settings ./tests/fixtures/ornament-geometry-settings.json \
+            --timeout-ms 900000 \
+            --report ./artifacts/geometry-audit-targeted-trace.json \
+            --summary ./artifacts/geometry-audit-targeted-trace-summary.md \
+            --fail-on high \
+            --step-audit-page-indexes 376 \
+            --step-audit-max-events 1500 \
+            --step-audit-max-elements 600 \
+            --step-audit-no-line-rects \
+            --step-audit-no-computed-style
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = './artifacts/geometry-audit-targeted-trace.json';
+          const report = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const mode = report.run?.stepAudit;
+          const traces = report.geometry?.stageByStepAudit;
+          const targetIssues = (report.audit?.issues || []).filter(issue =>
+            issue.pageIdx === 376 && issue.kind === 'imbalance');
+          const malformed = targetIssues.filter(issue =>
+            issue.stepByStepTrace?.traceAvailable !== true ||
+            issue.stepByStepTrace?.traceComplete !== true ||
+            issue.stepByStepTrace?.droppedEvents !== 0);
+          const targetPages = (traces?.pages || []).map(page => page.pageIndex);
+          if (!mode || mode.enabled !== true || mode.disabledByRequest !== false ||
+              JSON.stringify(mode.targetPageIndexes) !== JSON.stringify([376]) ||
+              !Array.isArray(traces?.pages) || targetPages.length !== 1 || targetPages[0] !== 376 ||
+              !traces.pages[0].eventCount || traces.pages[0].droppedEvents !== 0 ||
+              !targetIssues.length || malformed.length) {
+            console.error('Targeted causal trace is missing, incomplete, or not isolated to the requested page:', {
+              mode, targetPages, traceSummary: traces?.summary,
+              targetIssueCount: targetIssues.length,
+              malformed: malformed.map(issue => ({
+                pageIdx: issue.pageIdx, kind: issue.kind, trace: issue.stepByStepTrace
+              }))
+            });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            targetPageIndex: 376,
+            targetIssueCount: targetIssues.length,
+            eventCount: traces.pages[0].eventCount,
+            droppedEvents: traces.pages[0].droppedEvents,
+            traceComplete: true,
+            causalityPolicy: 'stage chronology captured; causal trigger still requires evidence-based interpretation',
+            targetedTraceGate: 'PASS'
+          }));
+          NODE
       - name: Upload long-document audit report
         if: always()
         uses: actions/upload-artifact@v4
@@ -347,5 +398,7 @@ jobs:
             artifacts/geometry-audit-summary.md
             artifacts/geometry-audit-ornaments.json
             artifacts/geometry-audit-ornaments-summary.md
+            artifacts/geometry-audit-targeted-trace.json
+            artifacts/geometry-audit-targeted-trace-summary.md
             artifacts/run-fingerprint.json
           if-no-files-found: warn
