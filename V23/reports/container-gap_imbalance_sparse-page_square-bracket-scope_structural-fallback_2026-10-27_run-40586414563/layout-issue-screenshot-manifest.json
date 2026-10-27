@@ -1,0 +1,696 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-27T21:32:31.255947+00:00",
+  "reportPdf": "artifacts/layout-issue-screenshot-report.pdf",
+  "sourceRuns": [
+    {
+      "repository": "SUGINACH/Tora_Book_Typesetter_Green",
+      "ref": "refs/heads/V23",
+      "gitCommit": "5223137d860f6777bfe1effbdc30f47d369a5336",
+      "runId": "40586414563",
+      "configuration": "default",
+      "pageCount": 639,
+      "manifestPath": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "repository": "SUGINACH/Tora_Book_Typesetter_Green",
+      "ref": "refs/heads/V23",
+      "gitCommit": "5223137d860f6777bfe1effbdc30f47d369a5336",
+      "runId": "40586414563",
+      "configuration": "ornaments",
+      "pageCount": 659,
+      "manifestPath": "artifacts/issue-screenshots/ornaments/manifest.json"
+    }
+  ],
+  "issueKinds": [
+    "container-gap",
+    "imbalance",
+    "sparse-page",
+    "square-bracket-scope",
+    "structural-fallback"
+  ],
+  "deferredDomPageIndexesNotCaptured": [
+    375,
+    376
+  ],
+  "screenshotCount": 29,
+  "screenshots": [
+    {
+      "pdfPageNumber": 2,
+      "configuration": "default",
+      "domPageIndex": 46,
+      "sourcePageLabel": null,
+      "screenshotFile": "default__page-index-46__structural-fallback.png",
+      "selectedIssueKinds": [
+        "structural-fallback"
+      ],
+      "issues": [
+        {
+          "kind": "structural-fallback",
+          "severity": "low",
+          "pageIdx": 46,
+          "message": "Short terminal fragment intentionally spans both text columns because no legal two-column split exists.",
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "full-width-terminal-residual"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 3,
+      "configuration": "default",
+      "domPageIndex": 218,
+      "sourcePageLabel": null,
+      "screenshotFile": "default__page-index-218__structural-fallback.png",
+      "selectedIssueKinds": [
+        "structural-fallback"
+      ],
+      "issues": [
+        {
+          "kind": "structural-fallback",
+          "severity": "low",
+          "pageIdx": 218,
+          "message": "Short terminal fragment intentionally spans both text columns because no legal two-column split exists.",
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "full-width-terminal-residual"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 4,
+      "configuration": "default",
+      "domPageIndex": 236,
+      "sourcePageLabel": null,
+      "screenshotFile": "default__page-index-236__imbalance.png",
+      "selectedIssueKinds": [
+        "imbalance"
+      ],
+      "issues": [
+        {
+          "kind": "imbalance",
+          "severity": "low",
+          "pageIdx": 236,
+          "message": "אי-איזון טורים: ימין=71px שמאל=65px פער=6px [capacity-limited-residual]",
+          "diff": 6,
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "capacity-limited-residual",
+          "balanceDiagnosis": null
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 5,
+      "configuration": "default",
+      "domPageIndex": 272,
+      "sourcePageLabel": null,
+      "screenshotFile": "default__page-index-272__imbalance.png",
+      "selectedIssueKinds": [
+        "imbalance"
+      ],
+      "issues": [
+        {
+          "kind": "imbalance",
+          "severity": "low",
+          "pageIdx": 272,
+          "message": "אי-איזון טורים: ימין=71px שמאל=65px פער=6px [capacity-limited-residual]",
+          "diff": 6,
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "capacity-limited-residual",
+          "balanceDiagnosis": null
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 6,
+      "configuration": "default",
+      "domPageIndex": 315,
+      "sourcePageLabel": null,
+      "screenshotFile": "default__page-index-315__structural-fallback.png",
+      "selectedIssueKinds": [
+        "structural-fallback"
+      ],
+      "issues": [
+        {
+          "kind": "structural-fallback",
+          "severity": "low",
+          "pageIdx": 315,
+          "message": "Short terminal fragment intentionally spans both text columns because no legal two-column split exists.",
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "full-width-terminal-residual"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 7,
+      "configuration": "default",
+      "domPageIndex": 325,
+      "sourcePageLabel": null,
+      "screenshotFile": "default__page-index-325__imbalance.png",
+      "selectedIssueKinds": [
+        "imbalance"
+      ],
+      "issues": [
+        {
+          "kind": "imbalance",
+          "severity": "low",
+          "pageIdx": 325,
+          "message": "אי-איזון טורים: ימין=71px שמאל=65px פער=6px [capacity-limited-residual]",
+          "diff": 6,
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "capacity-limited-residual",
+          "balanceDiagnosis": null
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 8,
+      "configuration": "default",
+      "domPageIndex": 341,
+      "sourcePageLabel": "שמ",
+      "screenshotFile": "default__page-index-341__sparse-page.png",
+      "selectedIssueKinds": [
+        "sparse-page"
+      ],
+      "issues": [
+        {
+          "kind": "sparse-page",
+          "severity": "low",
+          "pageIdx": 341,
+          "pageLabel": "שמ",
+          "message": "תפוסת טקסט נמוכה בעמוד שמ: 12% מהקיבולת המשוערת",
+          "fillRatio": 0.124
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 9,
+      "configuration": "default",
+      "domPageIndex": 501,
+      "sourcePageLabel": "תק",
+      "screenshotFile": "default__page-index-501__sparse-page.png",
+      "selectedIssueKinds": [
+        "sparse-page"
+      ],
+      "issues": [
+        {
+          "kind": "sparse-page",
+          "severity": "medium",
+          "pageIdx": 501,
+          "pageLabel": "תק",
+          "message": "תפוסת טקסט נמוכה בעמוד תק: 7% מהקיבולת המשוערת",
+          "fillRatio": 0.067
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 10,
+      "configuration": "default",
+      "domPageIndex": 505,
+      "sourcePageLabel": "תקד",
+      "screenshotFile": "default__page-index-505__square-bracket-scope.png",
+      "selectedIssueKinds": [
+        "square-bracket-scope"
+      ],
+      "issues": [
+        {
+          "kind": "square-bracket-scope",
+          "severity": "medium",
+          "pageIdx": 505,
+          "pageLabel": "תקד",
+          "message": "טווח סוגריים מרובעים/הערת שוליים חוצה פסקאות, טורים: עמוד תקד → תקד; פסקאות מקור 2566–2567"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 11,
+      "configuration": "default",
+      "domPageIndex": 514,
+      "sourcePageLabel": "תקיג",
+      "screenshotFile": "default__page-index-514__square-bracket-scope.png",
+      "selectedIssueKinds": [
+        "square-bracket-scope"
+      ],
+      "issues": [
+        {
+          "kind": "square-bracket-scope",
+          "severity": "medium",
+          "pageIdx": 514,
+          "pageLabel": "תקיג",
+          "message": "טווח סוגריים מרובעים/הערת שוליים חוצה פסקאות, טורים: עמוד תקיג → תקיג; פסקאות מקור 2614–2617"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 12,
+      "configuration": "default",
+      "domPageIndex": 625,
+      "sourcePageLabel": "תרכד",
+      "screenshotFile": "default__page-index-625__container-gap_sparse-page.png",
+      "selectedIssueKinds": [
+        "container-gap",
+        "sparse-page"
+      ],
+      "issues": [
+        {
+          "kind": "sparse-page",
+          "severity": "low",
+          "pageIdx": 625,
+          "pageLabel": "תרכד",
+          "message": "תפוסת טקסט נמוכה בעמוד תרכד: 16% מהקיבולת המשוערת",
+          "fillRatio": 0.155
+        },
+        {
+          "kind": "container-gap",
+          "severity": "medium",
+          "pageIdx": 625,
+          "pageLabel": "תרכד",
+          "message": "פער אנכי של 729px בין סוף טקסט הגוף ל-אזור הערות השוליים בעמוד תרכד",
+          "gapPx": 729.19,
+          "from": "last-visible-body-text-bottom",
+          "to": "footnote-area-top"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 13,
+      "configuration": "default",
+      "domPageIndex": 626,
+      "sourcePageLabel": "תרכה",
+      "screenshotFile": "default__page-index-626__container-gap.png",
+      "selectedIssueKinds": [
+        "container-gap"
+      ],
+      "issues": [
+        {
+          "kind": "container-gap",
+          "severity": "medium",
+          "pageIdx": 626,
+          "pageLabel": "תרכה",
+          "message": "פער אנכי של 490px בין סוף טקסט הגוף ל-אזור הערות השוליים בעמוד תרכה",
+          "gapPx": 489.69,
+          "from": "last-visible-body-text-bottom",
+          "to": "footnote-area-top"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 14,
+      "configuration": "default",
+      "domPageIndex": 629,
+      "sourcePageLabel": "תרכח",
+      "screenshotFile": "default__page-index-629__square-bracket-scope.png",
+      "selectedIssueKinds": [
+        "square-bracket-scope"
+      ],
+      "issues": [
+        {
+          "kind": "square-bracket-scope",
+          "severity": "medium",
+          "pageIdx": 629,
+          "pageLabel": "תרכח",
+          "message": "טווח סוגריים מרובעים/הערת שוליים חוצה פסקאות, עמודים: עמוד תרכז → תרכח; פסקאות מקור 3080–3081"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 15,
+      "configuration": "default",
+      "domPageIndex": 632,
+      "sourcePageLabel": "תרלא",
+      "screenshotFile": "default__page-index-632__container-gap.png",
+      "selectedIssueKinds": [
+        "container-gap"
+      ],
+      "issues": [
+        {
+          "kind": "container-gap",
+          "severity": "medium",
+          "pageIdx": 632,
+          "pageLabel": "תרלא",
+          "message": "פער אנכי של 353px בין סוף טקסט הגוף ל-אזור הערות השוליים בעמוד תרלא",
+          "gapPx": 353.44,
+          "from": "last-visible-body-text-bottom",
+          "to": "footnote-area-top"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/default/manifest.json"
+    },
+    {
+      "pdfPageNumber": 16,
+      "configuration": "ornaments",
+      "domPageIndex": 41,
+      "sourcePageLabel": null,
+      "screenshotFile": "ornaments__page-index-41__structural-fallback.png",
+      "selectedIssueKinds": [
+        "structural-fallback"
+      ],
+      "issues": [
+        {
+          "kind": "structural-fallback",
+          "severity": "low",
+          "pageIdx": 41,
+          "message": "Short terminal fragment intentionally spans both text columns because no legal two-column split exists.",
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "full-width-terminal-residual"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 17,
+      "configuration": "ornaments",
+      "domPageIndex": 90,
+      "sourcePageLabel": null,
+      "screenshotFile": "ornaments__page-index-90__imbalance.png",
+      "selectedIssueKinds": [
+        "imbalance"
+      ],
+      "issues": [
+        {
+          "kind": "imbalance",
+          "severity": "low",
+          "pageIdx": 90,
+          "message": "אי-איזון טורים: ימין=886px שמאל=893px פער=7px [global-justify-rollback-residual]",
+          "diff": 7,
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "global-justify-rollback-residual",
+          "balanceDiagnosis": {
+            "source": "global-justify-diagnostic",
+            "reason": "rollback-after-outer-and-tallest-growth",
+            "initialDiffPx": 7,
+            "overshootAfterShrinkPx": 8,
+            "rollback": {
+              "outerGrowth": true,
+              "tallestGrowth": true,
+              "flowOverflowIntroduced": false
+            }
+          }
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 18,
+      "configuration": "ornaments",
+      "domPageIndex": 109,
+      "sourcePageLabel": null,
+      "screenshotFile": "ornaments__page-index-109__structural-fallback.png",
+      "selectedIssueKinds": [
+        "structural-fallback"
+      ],
+      "issues": [
+        {
+          "kind": "structural-fallback",
+          "severity": "low",
+          "pageIdx": 109,
+          "message": "Short terminal fragment intentionally spans both text columns because no legal two-column split exists.",
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "full-width-terminal-residual"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 19,
+      "configuration": "ornaments",
+      "domPageIndex": 133,
+      "sourcePageLabel": null,
+      "screenshotFile": "ornaments__page-index-133__structural-fallback.png",
+      "selectedIssueKinds": [
+        "structural-fallback"
+      ],
+      "issues": [
+        {
+          "kind": "structural-fallback",
+          "severity": "low",
+          "pageIdx": 133,
+          "message": "Short terminal fragment intentionally spans both text columns because no legal two-column split exists.",
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "full-width-terminal-residual"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 20,
+      "configuration": "ornaments",
+      "domPageIndex": 155,
+      "sourcePageLabel": null,
+      "screenshotFile": "ornaments__page-index-155__imbalance.png",
+      "selectedIssueKinds": [
+        "imbalance"
+      ],
+      "issues": [
+        {
+          "kind": "imbalance",
+          "severity": "low",
+          "pageIdx": 155,
+          "message": "אי-איזון טורים: ימין=71px שמאל=65px פער=6px [policy-accepted-light-justify-residual]",
+          "diff": 6,
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "policy-accepted-light-justify-residual",
+          "balanceDiagnosis": null
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 21,
+      "configuration": "ornaments",
+      "domPageIndex": 431,
+      "sourcePageLabel": null,
+      "screenshotFile": "ornaments__page-index-431__imbalance.png",
+      "selectedIssueKinds": [
+        "imbalance"
+      ],
+      "issues": [
+        {
+          "kind": "imbalance",
+          "severity": "low",
+          "pageIdx": 431,
+          "message": "אי-איזון טורים: ימין=543px שמאל=550px פער=7px [global-justify-rollback-residual]",
+          "diff": 7,
+          "location": "page > wrapper > body-flow > block-2col",
+          "balanceOutcome": "global-justify-rollback-residual",
+          "balanceDiagnosis": {
+            "source": "global-justify-diagnostic",
+            "reason": "rollback-after-outer-and-tallest-growth",
+            "initialDiffPx": 7,
+            "overshootAfterShrinkPx": 16,
+            "rollback": {
+              "outerGrowth": true,
+              "tallestGrowth": true,
+              "flowOverflowIntroduced": false
+            }
+          }
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 22,
+      "configuration": "ornaments",
+      "domPageIndex": 433,
+      "sourcePageLabel": "תלב",
+      "screenshotFile": "ornaments__page-index-433__sparse-page.png",
+      "selectedIssueKinds": [
+        "sparse-page"
+      ],
+      "issues": [
+        {
+          "kind": "sparse-page",
+          "severity": "medium",
+          "pageIdx": 433,
+          "pageLabel": "תלב",
+          "message": "תפוסת טקסט נמוכה בעמוד תלב: 2% מהקיבולת המשוערת",
+          "fillRatio": 0.023
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 23,
+      "configuration": "ornaments",
+      "domPageIndex": 517,
+      "sourcePageLabel": "תקטז",
+      "screenshotFile": "ornaments__page-index-517__square-bracket-scope.png",
+      "selectedIssueKinds": [
+        "square-bracket-scope"
+      ],
+      "issues": [
+        {
+          "kind": "square-bracket-scope",
+          "severity": "low",
+          "pageIdx": 517,
+          "pageLabel": "תקטז",
+          "message": "טווח סוגריים מרובעים/הערת שוליים חוצה פסקאות: עמוד תקטז → תקטז; פסקאות מקור 2566–2567"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 24,
+      "configuration": "ornaments",
+      "domPageIndex": 527,
+      "sourcePageLabel": "תקכו",
+      "screenshotFile": "ornaments__page-index-527__square-bracket-scope.png",
+      "selectedIssueKinds": [
+        "square-bracket-scope"
+      ],
+      "issues": [
+        {
+          "kind": "square-bracket-scope",
+          "severity": "medium",
+          "pageIdx": 527,
+          "pageLabel": "תקכו",
+          "message": "טווח סוגריים מרובעים/הערת שוליים חוצה פסקאות, טורים, עמודים: עמוד תקכה → תקכו; פסקאות מקור 2614–2617"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 25,
+      "configuration": "ornaments",
+      "domPageIndex": 558,
+      "sourcePageLabel": "תקנז",
+      "screenshotFile": "ornaments__page-index-558__container-gap.png",
+      "selectedIssueKinds": [
+        "container-gap"
+      ],
+      "issues": [
+        {
+          "kind": "container-gap",
+          "severity": "medium",
+          "pageIdx": 558,
+          "pageLabel": "תקנז",
+          "message": "פער אנכי של 765px בין סוף טקסט הגוף ל-תחתית אזור הגוף בעמוד תקנז",
+          "gapPx": 765.06,
+          "from": "last-visible-body-text-bottom",
+          "to": "body-flow-bottom"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 26,
+      "configuration": "ornaments",
+      "domPageIndex": 559,
+      "sourcePageLabel": "תקנח",
+      "screenshotFile": "ornaments__page-index-559__container-gap.png",
+      "selectedIssueKinds": [
+        "container-gap"
+      ],
+      "issues": [
+        {
+          "kind": "container-gap",
+          "severity": "medium",
+          "pageIdx": 559,
+          "pageLabel": "תקנח",
+          "message": "פער אנכי של 542px בין סוף טקסט הגוף ל-אזור הערות השוליים בעמוד תקנח",
+          "gapPx": 541.94,
+          "from": "last-visible-body-text-bottom",
+          "to": "footnote-area-top"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 27,
+      "configuration": "ornaments",
+      "domPageIndex": 588,
+      "sourcePageLabel": "תקפז",
+      "screenshotFile": "ornaments__page-index-588__sparse-page.png",
+      "selectedIssueKinds": [
+        "sparse-page"
+      ],
+      "issues": [
+        {
+          "kind": "sparse-page",
+          "severity": "medium",
+          "pageIdx": 588,
+          "pageLabel": "תקפז",
+          "message": "תפוסת טקסט נמוכה בעמוד תקפז: 5% מהקיבולת המשוערת",
+          "fillRatio": 0.047
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 28,
+      "configuration": "ornaments",
+      "domPageIndex": 628,
+      "sourcePageLabel": "תרכז",
+      "screenshotFile": "ornaments__page-index-628__sparse-page.png",
+      "selectedIssueKinds": [
+        "sparse-page"
+      ],
+      "issues": [
+        {
+          "kind": "sparse-page",
+          "severity": "medium",
+          "pageIdx": 628,
+          "pageLabel": "תרכז",
+          "message": "תפוסת טקסט נמוכה בעמוד תרכז: 5% מהקיבולת המשוערת",
+          "fillRatio": 0.047
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 29,
+      "configuration": "ornaments",
+      "domPageIndex": 649,
+      "sourcePageLabel": "תרמח",
+      "screenshotFile": "ornaments__page-index-649__square-bracket-scope.png",
+      "selectedIssueKinds": [
+        "square-bracket-scope"
+      ],
+      "issues": [
+        {
+          "kind": "square-bracket-scope",
+          "severity": "medium",
+          "pageIdx": 649,
+          "pageLabel": "תרמח",
+          "message": "טווח סוגריים מרובעים/הערת שוליים חוצה פסקאות, עמודים: עמוד תרמו → תרמח; פסקאות מקור 3080–3081"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    },
+    {
+      "pdfPageNumber": 30,
+      "configuration": "ornaments",
+      "domPageIndex": 655,
+      "sourcePageLabel": "תרנד",
+      "screenshotFile": "ornaments__page-index-655__container-gap.png",
+      "selectedIssueKinds": [
+        "container-gap"
+      ],
+      "issues": [
+        {
+          "kind": "container-gap",
+          "severity": "medium",
+          "pageIdx": 655,
+          "pageLabel": "תרנד",
+          "message": "פער אנכי של 561px בין סוף טקסט הגוף ל-אזור הערות השוליים בעמוד תרנד",
+          "gapPx": 560.75,
+          "from": "last-visible-body-text-bottom",
+          "to": "footnote-area-top"
+        }
+      ],
+      "sourceManifest": "artifacts/issue-screenshots/ornaments/manifest.json"
+    }
+  ],
+  "interpretation": "Screenshots document measured findings for review; they do not by themselves prove causality or resolution."
+}
