@@ -1346,27 +1346,61 @@ async function main() {
                     const issues = audit.issues || [];
                     const hasToken = (node, tokenId) => !!tokenId && (node?.tokenId === tokenId ||
                         node?.attributes?.['data-token-id'] === tokenId || node?.before?.tokenId === tokenId || node?.after?.tokenId === tokenId);
+                    // Some geometry findings (notably column imbalance) are block-level and
+                    // have no single issue.tokenId. Recover paragraph token IDs from the
+                    // structured content context so their trace can be linked to real events.
+                    const collectIssueTokenIds = issue => {
+                        const found = new Set();
+                        const visit = (value, depth = 0) => {
+                            if (!value || typeof value !== 'object' || depth > 7) return;
+                            if (!Array.isArray(value) && value.tokenId != null) found.add(String(value.tokenId));
+                            if (Array.isArray(value)) value.forEach(item => visit(item, depth + 1));
+                            else Object.values(value).forEach(item => visit(item, depth + 1));
+                        };
+                        visit(issue);
+                        return [...found];
+                    };
                     const issueLinks = issues.map((issue, issueIndex) => {
                         const trace = traces.find(item => item.pageIndex === issue.pageIdx) || null;
                         if (!trace) return { issueIndex, kind: issue.kind, severity: issue.severity, pageIdx: issue.pageIdx,
                             tokenId: issue.tokenId || null, traceAvailable: false, reason: 'no-trace-for-page' };
-                        const tokenId = issue.tokenId == null ? null : String(issue.tokenId), matching = [];
+                        const tokenIds = collectIssueTokenIds(issue);
+                        const tokenId = issue.tokenId == null ? null : String(issue.tokenId);
+                        const matching = [], matchingTokenIdsByEvent = [];
                         for (const event of trace.events) {
-                            const targetMatch = tokenId && event.target?.tokenId === tokenId;
-                            const deltaMatch = tokenId && ['added','removed'].some(k => (event.delta?.[k]||[]).some(n=>hasToken(n,tokenId))) ||
-                                tokenId && (event.delta?.changed||[]).some(n=>hasToken(n,tokenId));
-                            if(targetMatch||deltaMatch)matching.push(event.index);
+                            const eventMatches = tokenIds.filter(id =>
+                                event.target?.tokenId === id ||
+                                ['added','removed','changed'].some(k => (event.delta?.[k] || []).some(n => hasToken(n, id))));
+                            if (eventMatches.length) {
+                                matching.push(event.index);
+                                matchingTokenIdsByEvent.push({ eventIndex: event.index, tokenIds: eventMatches });
+                            }
                         }
-                        let firstAppearanceEventIndex=null;
-                        if(tokenId)for(const event of trace.events)if((event.delta?.added||[]).some(n=>hasToken(n,tokenId))){firstAppearanceEventIndex=event.index;break;}
-                        const preview=String(issue.pText||issue.nodeText||issue.text||'').replace(/\\s+/g,' ').slice(0,48);
-                        if(firstAppearanceEventIndex==null&&preview){const found=trace.events.find(e=>(e.delta?.added||[]).some(n=>n.text?.includes(preview)));if(found)firstAppearanceEventIndex=found.index;}
-                        return {issueIndex,kind:issue.kind,severity:issue.severity,pageIdx:issue.pageIdx,tokenId,textPreview:preview||null,
-                            traceAvailable:true,firstAppearanceEventIndex,lastEventIndex:trace.events.length?trace.events[trace.events.length-1].index:null,
-                            targetTouchEventIndexes:matching,candidateWindowStart:firstAppearanceEventIndex,
-                            candidateWindowEnd:trace.events.length?trace.events[trace.events.length-1].index:null,
-                            traceComplete:trace.droppedEvents===0,droppedEvents:trace.droppedEvents,
-                            causality:'candidate-window-only; a trigger stage is not declared automatically'};
+                        let firstAppearanceEventIndex = null;
+                        for (const event of trace.events) {
+                            if ((event.delta?.added || []).some(n => tokenIds.some(id => hasToken(n, id)))) {
+                                firstAppearanceEventIndex = event.index;
+                                break;
+                            }
+                        }
+                        const preview = String(issue.pText || issue.nodeText || issue.text || '').replace(/\\s+/g, ' ').slice(0, 48);
+                        if (firstAppearanceEventIndex == null && preview) {
+                            const found = trace.events.find(e => (e.delta?.added || []).some(n => n.text?.includes(preview)));
+                            if (found) firstAppearanceEventIndex = found.index;
+                        }
+                        return {
+                            issueIndex, kind: issue.kind, severity: issue.severity, pageIdx: issue.pageIdx,
+                            tokenId, relatedTokenIds: tokenIds, textPreview: preview || null,
+                            traceAvailable: true, firstAppearanceEventIndex,
+                            lastEventIndex: trace.events.length ? trace.events[trace.events.length - 1].index : null,
+                            targetTouchEventIndexes: matching, matchingTokenIdsByEvent,
+                            candidateWindowStart: firstAppearanceEventIndex,
+                            candidateWindowEnd: trace.events.length ? trace.events[trace.events.length - 1].index : null,
+                            traceComplete: trace.droppedEvents === 0, droppedEvents: trace.droppedEvents,
+                            causality: matching.length
+                                ? 'related-content-events-linked; causal trigger still requires stage-level evidence'
+                                : 'candidate-window-only; no related token event could be linked'
+                        };
                     });
                     return {version:1,config:window.__stepByStepAudit?.config||null,
                         summary:{pagesWithTrace:traces.length,pagesWithDroppedEvents:traces.filter(p=>p.droppedEvents>0).length,
