@@ -63,7 +63,7 @@ function help() {
     process.stdout.write('Geometry audit CLI\nRequired: --input <text-file>\n' +
       'Options: --settings <json-file>, --report <json-file>, --summary <md-file>, --full-model, --repeat-check,\n' +
       '--fail-on <high|medium|low|none>, --timeout-ms <number>, --viewport-width <number>, --viewport-height <number>, --require-ornaments, --require-geometry-features, --require-note-marker-line-diagnostics,\n' +
-      '--test-empty-column-balance, --test-missing-column-element (regression tests only),\n' +
+      '--test-empty-column-balance, --test-missing-column-element, --test-body-overflow (regression tests only),\n' +
       '--step-audit-max-events <n>, --step-audit-max-elements <n>, --step-audit-text-chars <n>, --step-audit-page-indexes <i,j,...> (targeted causal trace), --step-audit-no-line-rects, --step-audit-no-computed-style, --step-audit-disabled,\n' +
       '--screenshots-dir <dir>, --screenshot-label <label>, --screenshot-max-per-kind <1..10> (real rendered issue-page captures; excludes deferred indexes 375/376)\n');
 }
