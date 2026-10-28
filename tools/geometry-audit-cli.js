@@ -1007,22 +1007,36 @@ async function main() {
                 target.el.setAttribute('data-geometry-audit-test-body-overflow', 'true');
                 // Keep the mutation target and its prior inline style. Extract the
                 // canonical model before injection so integrity snapshots remain baseline.
+                const flow = target.el.closest('.page-body-flow');
+                if (!flow) throw new Error('Body-overflow regression target is not inside .page-body-flow');
+                const props = ['height', 'min-height', 'max-height', 'flex', 'overflow'];
                 window.__geomAuditTestBodyOverflowRestore = {
-                    el: target.el,
-                    value: target.el.style.getPropertyValue('transform'),
-                    priority: target.el.style.getPropertyPriority('transform')
+                    el: flow,
+                    styles: Object.fromEntries(props.map(name => [name, {
+                        value: flow.style.getPropertyValue(name),
+                        priority: flow.style.getPropertyPriority(name)
+                    }]))
                 };
             }
             const model = window.__geomAudit.extract();
             if (testBodyOverflow && window.__geomAuditTestBodyOverflowRestore) {
-                window.__geomAuditTestBodyOverflowRestore.el.style.setProperty('transform', 'translateY(3000px)', 'important');
+                // Shrink only the measured body-flow boundary while leaving its text
+                // boxes in place. This directly exercises the container-overlap predicate
+                // and avoids transform-dependent text selection/line-box behavior.
+                const flow = window.__geomAuditTestBodyOverflowRestore.el;
+                for (const [name, value] of Object.entries({
+                    height: '1px', 'min-height': '1px', 'max-height': '1px',
+                    flex: 'none', overflow: 'visible'
+                })) flow.style.setProperty(name, value, 'important');
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             }
             const audit = window.__geomAudit.audit(model);
             if (testBodyOverflow && window.__geomAuditTestBodyOverflowRestore) {
                 const saved = window.__geomAuditTestBodyOverflowRestore;
-                if (saved.value) saved.el.style.setProperty('transform', saved.value, saved.priority);
-                else saved.el.style.removeProperty('transform');
+                for (const [name, value] of Object.entries(saved.styles)) {
+                    if (value.value) saved.el.style.setProperty(name, value.value, value.priority);
+                    else saved.el.style.removeProperty(name);
+                }
                 delete window.__geomAuditTestBodyOverflowRestore;
             }
             // The full per-page export can be large. Build it only when explicitly requested;
