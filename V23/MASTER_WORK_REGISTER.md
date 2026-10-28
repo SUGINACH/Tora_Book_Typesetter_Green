@@ -998,3 +998,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - CI על `2119245980bbb92c937e4f5dd9d70179839faecd` נעצר בשלב `node --check` בגלל הצהרה כפולה של `const flow` בתוך אותו בלוק fixture; לכן לא התקיימה בדיקת overflow.
 - תיקון `39875356aa6460d2ca806245596fc58376621739`: binding שני הוחלף ל-`targetFlow`. עדיין נדרש אימות ה-CI העדכני של fixture ושל predicate `container-overlap`.
+
+
+## 2026-10-28 — guard למדידת trigger ברגרסיית overflow
+
+- ריצת CI על `39875356aa6460d2ca806245596fc58376621739` יצרה דוח בלי `container-overlap`, ולכן ה-fixture לא הוכיח את predicate למרות שהפקודה רצה.
+- Commit `1db6e89ed18974972e28d2dda2cb458a34368a5a` מוסיף מדידת `flowHeightPx` ו-`overflowPx` אחרי ההזרקה ומכשיל את הבדיקה אם החריגה אינה חיובית; ה-fixture משלב צמצום flow והסטת תיבת הטקסט, ומשחזר את כל הסגנונות. אימות ה-audit עצמו עדיין ממתין.
