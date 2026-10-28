@@ -1025,10 +1025,31 @@ async function main() {
                 // and avoids transform-dependent text selection/line-box behavior.
                 const flow = window.__geomAuditTestBodyOverflowRestore.el;
                 for (const [name, value] of Object.entries({
-                    height: '1px', 'min-height': '1px', 'max-height': '1px',
-                    flex: 'none', overflow: 'visible'
+                    position: 'relative', height: '1px', 'min-height': '0',
+                    'max-height': '1px', flex: '0 0 1px',
+                    'flex-basis': '1px', overflow: 'visible'
                 })) flow.style.setProperty(name, value, 'important');
+                // Also displace the selected measured text box so the fixture remains
+                // effective if the parent participates in grid/flex intrinsic sizing.
+                const target = flow.querySelector('[data-geometry-audit-test-body-overflow="true"]');
+                if (!target) throw new Error('Body-overflow regression target marker was lost');
+                window.__geomAuditTestBodyOverflowRestore.target = {
+                    el: target,
+                    value: target.style.getPropertyValue('transform'),
+                    priority: target.style.getPropertyPriority('transform')
+                };
+                target.style.setProperty('transform', 'translateY(3000px)', 'important');
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                const flowRect = flow.getBoundingClientRect();
+                const targetRect = target.getBoundingClientRect();
+                window.__geomAuditTestBodyOverflowRestore.measured = {
+                    flowHeightPx: flowRect.height,
+                    overflowPx: targetRect.bottom - flowRect.bottom
+                };
+                if (!(window.__geomAuditTestBodyOverflowRestore.measured.overflowPx > 1)) {
+                    throw new Error('Body-overflow fixture failed to create measured overflow: ' +
+                        JSON.stringify(window.__geomAuditTestBodyOverflowRestore.measured));
+                }
             }
             const audit = window.__geomAudit.audit(model);
             if (testBodyOverflow && window.__geomAuditTestBodyOverflowRestore) {
@@ -1036,6 +1057,10 @@ async function main() {
                 for (const [name, value] of Object.entries(saved.styles)) {
                     if (value.value) saved.el.style.setProperty(name, value.value, value.priority);
                     else saved.el.style.removeProperty(name);
+                }
+                if (saved.target) {
+                    if (saved.target.value) saved.target.el.style.setProperty('transform', saved.target.value, saved.target.priority);
+                    else saved.target.el.style.removeProperty('transform');
                 }
                 delete window.__geomAuditTestBodyOverflowRestore;
             }
