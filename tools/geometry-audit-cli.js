@@ -993,11 +993,24 @@ async function main() {
                 const target = candidates.reduce((best, item) => !best || item.rect.bottom > best.rect.bottom ? item : best, null);
                 target.el.setAttribute('data-geometry-audit-test-body-overflow', 'true');
                 // Transform changes only the measured box, not normal flow or source text.
+                // Keep a restoration record so the injected geometry cannot leak into
+                // subsequent parenthesis/conservation integrity snapshots.
+                window.__geomAuditTestBodyOverflowRestore = {
+                    el: target.el,
+                    value: target.el.style.getPropertyValue('transform'),
+                    priority: target.el.style.getPropertyPriority('transform')
+                };
                 target.el.style.setProperty('transform', 'translateY(300px)', 'important');
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             }
             const model = window.__geomAudit.extract();
             const audit = window.__geomAudit.audit(model);
+            if (testBodyOverflow && window.__geomAuditTestBodyOverflowRestore) {
+                const saved = window.__geomAuditTestBodyOverflowRestore;
+                if (saved.value) saved.el.style.setProperty('transform', saved.value, saved.priority);
+                else saved.el.style.removeProperty('transform');
+                delete window.__geomAuditTestBodyOverflowRestore;
+            }
             // The full per-page export can be large. Build it only when explicitly requested;
             // the default report needs summary/issues/stats, not a duplicate serialized DOM model.
             const clean = includeFullModel
