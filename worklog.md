@@ -3860,3 +3860,10 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 ## 2026-10-28 — עדכון מטריצת widow/orphan לאחר בדיקת הזרקה
 
 - עדכנתי את שורת Widow/orphan ב-`V23/ISSUE_COVERAGE_MATRIX_2026-10-28.md` (commit `eda5a54adbf0f2256c5cb0f4b3ebb0d76492f804`) להבחין בין הוכחת מסלול orphan מוזרק שעברה לבין טריגר טבעי שעדיין לא הוכח. אין לסגור את משפחת widow/orphan עד להוספת בדיקת widow ולבדיקת renderer טבעית/מטריצת מיקומים.
+
+
+## 2026-10-28 — הוספת רגרסיה ייעודית ל-widow
+
+- הוספתי `--test-widow-diagnostic` ב-`tools/geometry-audit-cli.js` (commit `23a6d6d599e8401f4f6c88b3a1d41494fe71afcf`). המצב מזריק זמנית node `p-end` בן שורה אחת בראש טור במודל שנמדד, מריץ את האודיט ומשחזר את המודל לפני בדיקות integrity.
+- נוסף CI assertion שמחייב בדיוק ממצא `widow` אחד בחומרה medium, `tokenId`, טקסט ותיבת גאומטריה תקינים, וללא browser runtime errors; הדוח נשמר ב-artifact (commit `17639657a8cb7c69a78eb2d303edcc2f5e281fb2`).
+- **ממתין לאימות:** ה-fixture המוזרק בודק את מסלול האבחון בלבד. טריגר טבעי של widow/orphan והערכת המנוע לאורך ראש/סוף עמוד עדיין פתוחים.
