@@ -1070,3 +1070,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 ## 2026-10-28 — matrix updated for injected orphan evidence
 
 - Commit `eda5a54adbf0f2256c5cb0f4b3ebb0d76492f804` updates the widow/orphan row: the injected orphan diagnostic is exercised/asserted, but natural renderer-trigger coverage and a widow-specific fixture remain open. This avoids treating a diagnostic unit regression as proof of layout quality.
+
+
+## 2026-10-28 — widow diagnostic regression gate
+
+- נוסף `--test-widow-diagnostic` ב-commit `23a6d6d599e8401f4f6c88b3a1d41494fe71afcf`; הוא מזריק p-end בן שורה אחת בתחילת טור, מריץ audit ומשחזר את המודל.
+- CI assertion ו-retention ב-commit `17639657a8cb7c69a78eb2d303edcc2f5e281fb2` מחייבים ממצא `widow/medium` יחיד עם tokenId, טקסט ותיבה מדודה, ללא runtime errors. נדרש CI; בדיקת trigger טבעי נשארת פתוחה.
