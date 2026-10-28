@@ -1065,3 +1065,8 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - CLI run `40670450381` עבר את `--test-orphan-diagnostic` ואת assertion. Artifact `12806869382` נבדק ישירות: ממצא אחד `orphan/medium`, שורה אחת ברוחב 115px, fallback metadata קיים (`none`/`null`), splitDiagnostics ו-childRect קיימים, ו-0 runtime errors.
 - תיקון scope ב-`auditWidowOrphan` מאומת עבור המסלול המוזרק; בדיקת התנהגות טבעית של widow/orphan עדיין פתוחה ומסומנת במטריצת הכיסוי.
+
+
+## 2026-10-28 — matrix updated for injected orphan evidence
+
+- Commit `eda5a54adbf0f2256c5cb0f4b3ebb0d76492f804` updates the widow/orphan row: the injected orphan diagnostic is exercised/asserted, but natural renderer-trigger coverage and a widow-specific fixture remain open. This avoids treating a diagnostic unit regression as proof of layout quality.
