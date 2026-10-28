@@ -1007,14 +1007,14 @@ async function main() {
                 target.el.setAttribute('data-geometry-audit-test-body-overflow', 'true');
                 // Keep the mutation target and its prior inline style. Extract the
                 // canonical model before injection so integrity snapshots remain baseline.
-                const flow = target.el.closest('.page-body-flow');
-                if (!flow) throw new Error('Body-overflow regression target is not inside .page-body-flow');
+                const targetFlow = target.el.closest('.page-body-flow');
+                if (!targetFlow) throw new Error('Body-overflow regression target is not inside .page-body-flow');
                 const props = ['height', 'min-height', 'max-height', 'flex', 'overflow'];
                 window.__geomAuditTestBodyOverflowRestore = {
-                    el: flow,
+                    el: targetFlow,
                     styles: Object.fromEntries(props.map(name => [name, {
-                        value: flow.style.getPropertyValue(name),
-                        priority: flow.style.getPropertyPriority(name)
+                        value: targetFlow.style.getPropertyValue(name),
+                        priority: targetFlow.style.getPropertyPriority(name)
                     }]))
                 };
             }
