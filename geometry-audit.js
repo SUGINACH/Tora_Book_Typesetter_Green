@@ -1198,7 +1198,7 @@ function auditWidowOrphan(node, issues) {
                     severity: 'medium',
                     pageIdx: getPageIdx(node),
                     location: describePath(node),
-                    tokenId: first.tokenId,
+                    tokenId: first.tokenId ?? _nodeToEl.get(first)?.getAttribute('data-token-id') ?? null,
                     pText: first.text,
                     childRect: { x: Math.round(first.rect.x), y: Math.round(first.rect.y), w: Math.round(first.rect.w), h: Math.round(first.rect.h) },
                     message: `אלמנה: השורה האחרונה של פסקה נמשכת מופיעה לבדה בראש טור ${node.side} ("${first.text.slice(0, 30)}...")`
