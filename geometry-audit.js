@@ -1211,6 +1211,9 @@ function auditWidowOrphan(node, issues) {
                 const lastEl = _nodeToEl.get(last);
                 const splitAttr = name => lastEl?.getAttribute(name) ?? null;
                 const cs = lastEl ? getComputedStyle(lastEl) : null;
+                const balanceBlock = lastEl?.closest('.block-2col') || null;
+                const balanceFallback = balanceBlock?.getAttribute('data-layout-balance-fallback') || null;
+                const balanceFallbackSparseLine = balanceBlock?.getAttribute('data-layout-balance-fallback-sparse-line') || null;
                 issues.push({
                     kind: 'orphan',
                     severity: 'medium',
