@@ -1023,3 +1023,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 - ה-fixture הקצר הקודם לא הכיל עמוד גוף שעבר את כל תנאי הזכאות של בדיקת overflow; הפקודה נכשלה ב-`Body-overflow regression requires a non-boundary rendered body page` לפני הפעלת האודיט.
 - נוסף `tests/fixtures/body-overflow-regression.txt` עם 18 פסקאות גוף, וה-CI הועבר להריץ את `--test-body-overflow` על קובץ זה במקום על smoke fixture. commits: `0ad7a01ebf693a4c7157e7e22b9491d42d754ac7`, `d213d60ec7ad859e0ae5093a81f5d6de0594abf2`.
 - אימות מלא ממתין לריצת CI חדשה; אין לסמן overflow כפתור עד שה-trigger וה-finding נראים בדוח.
+
+
+## 2026-10-28 — CLI regression gate עבר (V23)
+
+- `Geometry audit CLI` run `40668763261` על `32cbd21d7dff12d9358c34fd8d7fcbee15bc6299` הסתיים בהצלחה. עברו כל ה-fixtures הקיימים, כולל `--test-body-overflow` על `tests/fixtures/body-overflow-regression.txt` וה-assertion שמחייב `container-overlap` high עם `textOverflowPx > 0`, page index ו-preview.
+- המשמעות מוגבלת לצינור בדיקה מוזרק ול-fixtures: עדיין נדרש long audit מלא בשתי תצורות, השוואת inventory/coverage, בדיקת PDF, ובדיקות נפרדות ל-clipping ולחפיפת הערות טבעיים. אין להכריז שכל בעיות העימוד נפתרו.
