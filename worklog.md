@@ -3833,3 +3833,10 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 - הוספתי `V23/ISSUE_COVERAGE_MATRIX_2026-10-28.md` (commit `a45b9cb811a3d8d818a639cab1f0d32bd09e81a7`) כמימוש של דרישת N3 בקטלוג: לכל משפחת בעיה יש עמודות נפרדות ל-implemented, exercised, asserted, מצב long-document ופער הסגירה.
 - המטריצה מבדילה בין כיסוי קיים לבין הוכחה שהטריגר הופעל. היא מסמנת במפורש כפתוחים, בין השאר: widow/orphan ו-runt, heading-bottom, page-bound clipping, footnote overlap/reflow, side-note overlap, font fallback/tofu/U+E000, TOC pagination, HTML/PDF parity ומטריצת רוחב/גופן/scale. אין לסמן אותם PASS משום שאינם מופיעים ב-issue inventory הנוכחי.
 - המסמך הוא מפת פערים ולא טענה שהבעיות הללו תוקנו. המשך העבודה צריך לסגור משפחות לפי הפרוטוקול, עם fixture ו-long gate לכל אחת.
+
+
+## 2026-10-28 — שמירת ההשהיה המפורשת של page 376
+
+- בבדיקת workflow נמצא ש-`.github/workflows/geometry-audit-long.yml` עדיין מריץ `--step-audit-page-indexes 376`, בניגוד להנחיית הפרויקט להשהות את חקירת עמוד 376 עד לסיום יתר משפחות הבעיות.
+- השבתתי את שלב `Run targeted causal trace for known medium imbalance` עם `if: false` והערה מפורשת, ב-commit `20189a3244358e00cf75cbe8d0f758f4f4e0b2bd`. לא בדקתי את תוצאת ה-trace ולא שיניתי את הממצא עצמו. יש להחזיר את השלב רק אחרי שההשהיה תוסר במפורש.
+- בריצת long audit `40668464565` לפני השלב הזה, כל שערי long audit עד כה עברו: default audit, ornaments audit, note-marker rounding, PDF screenshot builder, step-audit suppression, rollback residuals, section-end contract, container-gap accounting ו-sparse-page accounting. הריצה נקטעה בעקבות התיקון הנוכחי לפני archive/upload, ולכן נדרשת ריצה חוזרת ללא page 376.
