@@ -3840,3 +3840,11 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 - בבדיקת workflow נמצא ש-`.github/workflows/geometry-audit-long.yml` עדיין מריץ `--step-audit-page-indexes 376`, בניגוד להנחיית הפרויקט להשהות את חקירת עמוד 376 עד לסיום יתר משפחות הבעיות.
 - השבתתי את שלב `Run targeted causal trace for known medium imbalance` עם `if: false` והערה מפורשת, ב-commit `20189a3244358e00cf75cbe8d0f758f4f4e0b2bd`. לא בדקתי את תוצאת ה-trace ולא שיניתי את הממצא עצמו. יש להחזיר את השלב רק אחרי שההשהיה תוסר במפורש.
 - בריצת long audit `40668464565` לפני השלב הזה, כל שערי long audit עד כה עברו: default audit, ornaments audit, note-marker rounding, PDF screenshot builder, step-audit suppression, rollback residuals, section-end contract, container-gap accounting ו-sparse-page accounting. הריצה נקטעה בעקבות התיקון הנוכחי לפני archive/upload, ולכן נדרשת ריצה חוזרת ללא page 376.
+
+
+## 2026-10-28 — תיקון orphan diagnostic והוספת רגרסיה ממוקדת
+
+- בביקורת סטטית נמצא פגם ב-`auditWidowOrphan`: ענף `orphan` השתמש במשתנים `balanceFallback` ו-`balanceFallbackSparseLine` שהוגדרו רק בתוך `auditSparseLastLine` (scope מקומי). אם מופיע orphan אמיתי, הענף עלול לזרוק `ReferenceError` במקום להפיק ממצא.
+- תיקנתי את ה-scope ב-commit `131d56f3f1dcfa1bc26a046f339d127c0d41cb2d` על ידי חישוב metadata מה-`.block-2col` של האלמנט הנבדק בתוך ענף orphan עצמו.
+- הוספתי `--test-orphan-diagnostic` ב-CLI (commit `5029e85baa0457a7aeabfad973756445dda9cfab`) שמזריק זמנית ל-model p-cut בן שורה אחת, מריץ audit ומשחזר את המודל לפני בדיקות integrity. הוספתי שער CI שדורש בדיוק ממצא orphan אחד, metadata מלא וללא runtime errors, ושומר JSON/summary ב-artifact (commit `de092f4901146191da75b3bb0a29f19a4acad548`).
+- **סטטוס:** התיקון וה-fixture עדיין ממתינים לריצת CI. זו בדיקת צינור האבחון בהזרקה מבוקרת; היא אינה מוכיחה שהמנוע הטבעי יוצר/מונע widow/orphan בכל המצבים.
