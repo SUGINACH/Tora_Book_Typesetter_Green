@@ -1861,10 +1861,10 @@ function auditSparsePage(page, issues) {
     );
     const isDocumentEnd = pageIndex >= 0 && pageIndex === pageEls.length - 1;
 
-    if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
-    if (isDocumentEnd) return { checked: true, excluded: 'document-end' };
-
-    // Chapter-end sparsity depends on the explicit balance/fill policy.
+    // Apply the more specific section-end fill rule before the generic
+    // structural chapter-end rule. A sub-shaar page is both a chapter boundary
+    // and the expected divider after a terminal .sec-divider-wrap; the generic
+    // rule must not mask the configured fill-mode classification.
     const chapterEndBalanceMode = document.getElementById('balance-chapter-end')?.value || 'balance';
     const hasTerminalSectionDivider = !!bodyFlow.lastElementChild?.classList.contains('sec-divider-wrap');
     const interveningBlankPage = !!nextPage?.classList.contains('blank-page');
@@ -1878,6 +1878,9 @@ function auditSparsePage(page, issues) {
             boundaryPageClass: String(sectionBoundaryPage.className || ''),
             interveningBlankPageClass: interveningBlankPage ? String(nextPage.className || '') : null };
     }
+
+    if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
+    if (isDocumentEnd) return { checked: true, excluded: 'document-end' };
 
     const heading2 = pageEl.querySelector(heading2Selector);
     const headingRect = heading2?.getBoundingClientRect();
