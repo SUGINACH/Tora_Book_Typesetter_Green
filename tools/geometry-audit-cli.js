@@ -13,7 +13,7 @@ const crypto = require('node:crypto');
 function parseArgs(argv) {
     const o = { input: null, settings: null, report: './artifacts/geometry-audit.json',
         summary: './artifacts/geometry-audit-summary.md', fullModel: false, failOn: 'high',
-        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, stepAuditMaxEvents:4000, stepAuditMaxElements:1200, stepAuditTextChars:180, stepAuditNoLineRects:false, stepAuditNoComputedStyle:false, stepAuditDisabled:false, stepAuditPageIndexes:null, screenshotsDir:null, screenshotLabel:'render', screenshotMaxPerKind:3, help: false };
+        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, testBodyOverflow: false, stepAuditMaxEvents:4000, stepAuditMaxElements:1200, stepAuditTextChars:180, stepAuditNoLineRects:false, stepAuditNoComputedStyle:false, stepAuditDisabled:false, stepAuditPageIndexes:null, screenshotsDir:null, screenshotLabel:'render', screenshotMaxPerKind:3, help: false };
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         const take = () => { if (i + 1 >= argv.length) throw new Error('Missing value for ' + arg); return argv[++i]; };
@@ -44,6 +44,7 @@ function parseArgs(argv) {
                 break;
             }
             case '--test-missing-column-element': o.testMissingColumnElement = true; break;
+            case '--test-body-overflow': o.testBodyOverflow = true; break;
             case '--fail-on': o.failOn = take(); break;
             case '--timeout-ms': o.timeoutMs = Number(take()); break;
             case '--viewport-width': o.viewportWidth = Number(take()); break;
@@ -938,7 +939,7 @@ async function main() {
             if (document.fonts && document.fonts.ready) await document.fonts.ready;
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         });
-        const data = await page.evaluate(async ({ includeFullModel, testEmptyColumnBalance, testMissingColumnElement }) => {
+        const data = await page.evaluate(async ({ includeFullModel, testEmptyColumnBalance, testMissingColumnElement, testBodyOverflow }) => {
             if (!window.__geomAudit) throw new Error('Geometry audit API unavailable');
             if (testEmptyColumnBalance) {
                 const blocks = Array.from(document.querySelectorAll('#book-container .block-2col'));
@@ -978,6 +979,21 @@ async function main() {
                 while (leftColumn.firstChild) preservationBin.appendChild(leftColumn.firstChild);
                 target.appendChild(preservationBin);
                 leftColumn.remove();
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            }
+            if (testBodyOverflow) {
+                const pageEl = Array.from(document.querySelectorAll('#book-container .a4-page'))
+                    .find(el => el.querySelector('.page-body-flow p'));
+                if (!pageEl) throw new Error('Body-overflow regression requires a rendered body paragraph');
+                const flow = pageEl.querySelector('.page-body-flow');
+                const candidates = Array.from(flow.querySelectorAll('.main-column p, .single-wide-col p'))
+                    .map(el => ({ el, rect: el.getBoundingClientRect() }))
+                    .filter(item => item.rect.width > 0 && item.rect.height > 0);
+                if (!candidates.length) throw new Error('Body-overflow regression could not find a visible body paragraph');
+                const target = candidates.reduce((best, item) => !best || item.rect.bottom > best.rect.bottom ? item : best, null);
+                target.el.setAttribute('data-geometry-audit-test-body-overflow', 'true');
+                // Transform changes only the measured box, not normal flow or source text.
+                target.el.style.setProperty('transform', 'translateY(300px)', 'important');
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             }
             const model = window.__geomAudit.extract();
@@ -1496,7 +1512,7 @@ async function main() {
                 bodyScrollHeight:document.body.scrollHeight,
                 bookContainerScrollHeight:document.getElementById('book-container')?.scrollHeight ?? null
             };
-        }, { includeFullModel: args.fullModel, testEmptyColumnBalance: args.testEmptyColumnBalance, testMissingColumnElement: args.testMissingColumnElement });
+        }, { includeFullModel: args.fullModel, testEmptyColumnBalance: args.testEmptyColumnBalance, testMissingColumnElement: args.testMissingColumnElement, testBodyOverflow: args.testBodyOverflow });
         const issueScreenshotCapture = await captureIssueScreenshots(page, data, args, root);
 
         const allIssues = Array.isArray(data.issues) ? data.issues : [];
@@ -1732,7 +1748,7 @@ async function main() {
             run:{ input:path.relative(root,inputPath).split(path.sep).join('/'), inputBytes:Buffer.byteLength(inputText,'utf8'),
               generatedAt:new Date().toISOString(), branch:process.env.GITHUB_REF_NAME || null,
               gitCommit:process.env.GITHUB_SHA || null, viewport:{width:args.viewportWidth,height:args.viewportHeight,deviceScaleFactor:1},
-              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, issueScreenshotCapture, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, stepAudit:{enabled:!args.stepAuditDisabled, disabledByRequest:args.stepAuditDisabled, disableReason:args.stepAuditDisabled?'full-document-stability-policy':null, maxEvents:args.stepAuditMaxEvents, maxElements:args.stepAuditMaxElements, textChars:args.stepAuditTextChars, includeLineRects:!args.stepAuditNoLineRects, includeComputedStyle:!args.stepAuditNoComputedStyle, targetPageIndexes:args.stepAuditPageIndexes}, browser:'Chromium headless' },
+              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, issueScreenshotCapture, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, testBodyOverflow:args.testBodyOverflow, stepAudit:{enabled:!args.stepAuditDisabled, disabledByRequest:args.stepAuditDisabled, disableReason:args.stepAuditDisabled?'full-document-stability-policy':null, maxEvents:args.stepAuditMaxEvents, maxElements:args.stepAuditMaxElements, textChars:args.stepAuditTextChars, includeLineRects:!args.stepAuditNoLineRects, includeComputedStyle:!args.stepAuditNoComputedStyle, targetPageIndexes:args.stepAuditPageIndexes}, browser:'Chromium headless' },
             pageCount:data.pageCount,
             geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,stepByStepAudit:data.stageByStepAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
             audit:{summary:data.summary,issues:data.issues,checks:data.checks},
