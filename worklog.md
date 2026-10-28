@@ -3806,3 +3806,10 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 - ריצת CLI על `c369fce9c480a4985fc92e63b7841291283e8187` נכשלה לפני ה-audit: ב-fixture הקצר לא נמצא עמוד גוף בר-בדיקה לאחר סינון גבולות פרק, ולכן לא ניתן היה להפעיל את predicate בתנאים תקפים.
 - הוספתי `tests/fixtures/body-overflow-regression.txt` עם 18 פסקאות גוף אחרי כותרות פתיחה, כדי לספק עמודי תוכן פנימיים שאינם כולם גבולות מבניים (commit `0ad7a01ebf693a4c7157e7e22b9491d42d754ac7`). עדכנתי את שלב ה-CI להשתמש בו (commit `d213d60ec7ad859e0ae5093a81f5d6de0594abf2`).
 - נדרשת ריצה חדשה כדי לוודא שה-fixture מכיל עמוד מתאים, שהמדידה המוזרקת חיובית, ושהאודיט מחזיר `container-overlap` בחומרה high. אם התנאי עדיין לא מתקיים, אין להחליש את ה-assertion.
+
+
+## 2026-10-28 — תוצאת CI של בדיקות ה-CLI וה-overflow fixture
+
+- ריצת `Geometry audit CLI` מס' `40668763261` על commit `32cbd21d7dff12d9358c34fd8d7fcbee15bc6299` הסתיימה `success`. כל שערי ה-CLI עברו, לרבות: smoke, no-legal-split, balance-capacity/H3, empty-column, missing-column, injected body-overflow, sparse-page/square-bracket, section-end boundary, ornaments, recto/verso headers ו-H2 ornament geometry.
+- בדיקת ה-overflow על ה-fixture הרב-עמודי עברה גם את שלב היצירה וגם את assertion שמחייב `container-overlap` בחומרה high עם מדידה חיובית ופרטי עמוד/טקסט. זו הוכחה לצינור האודיט בתנאי הזרקה מבוקרים בלבד; היא אינה מוכיחה שכל מקרי overflow טבעיים או PDF clipping מכוסים.
+- עדיין פתוח: ריצת המסמך הקנוני המלא בברירת מחדל ובעיטורים, השוואת הדוחות, בדיקת ה-PDF והשלמת מיפוי coverage לבעיות ההיסטוריות. אין לסמן את כלל העבודה כסגורה על סמך הצלחת ה-CLI בלבד.
