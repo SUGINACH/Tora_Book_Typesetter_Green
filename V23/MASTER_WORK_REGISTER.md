@@ -1059,3 +1059,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - נמצא ש-`auditWidowOrphan` השתמש ב-`balanceFallback` וב-`balanceFallbackSparseLine` מחוץ ל-scope שבו הוגדרו. התיקון המקומי בתוך ענף `p-cut` נמצא ב-commit `131d56f3f1dcfa1bc26a046f339d127c0d41cb2d`.
 - נוסף `--test-orphan-diagnostic` שמזריק model-node מסוג p-cut עם שורה אחת ומחזיר את המודל למצב baseline לאחר audit; שער CI ב-`de092f4901146191da75b3bb0a29f19a4acad548` דורש ממצא orphan מלא וללא runtime errors, ושומר את הדוח ב-artifact. נדרש CI כדי לאמת שהממצא מופק ושה-integrity נשאר תקין.
+
+
+## 2026-10-28 — orphan regression עבר ואומת ב-artifact
+
+- CLI run `40670450381` עבר את `--test-orphan-diagnostic` ואת assertion. Artifact `12806869382` נבדק ישירות: ממצא אחד `orphan/medium`, שורה אחת ברוחב 115px, fallback metadata קיים (`none`/`null`), splitDiagnostics ו-childRect קיימים, ו-0 runtime errors.
+- תיקון scope ב-`auditWidowOrphan` מאומת עבור המסלול המוזרק; בדיקת התנהגות טבעית של widow/orphan עדיין פתוחה ומסומנת במטריצת הכיסוי.
