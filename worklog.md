@@ -3848,3 +3848,10 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 - תיקנתי את ה-scope ב-commit `131d56f3f1dcfa1bc26a046f339d127c0d41cb2d` על ידי חישוב metadata מה-`.block-2col` של האלמנט הנבדק בתוך ענף orphan עצמו.
 - הוספתי `--test-orphan-diagnostic` ב-CLI (commit `5029e85baa0457a7aeabfad973756445dda9cfab`) שמזריק זמנית ל-model p-cut בן שורה אחת, מריץ audit ומשחזר את המודל לפני בדיקות integrity. הוספתי שער CI שדורש בדיוק ממצא orphan אחד, metadata מלא וללא runtime errors, ושומר JSON/summary ב-artifact (commit `de092f4901146191da75b3bb0a29f19a4acad548`).
 - **סטטוס:** התיקון וה-fixture עדיין ממתינים לריצת CI. זו בדיקת צינור האבחון בהזרקה מבוקרת; היא אינה מוכיחה שהמנוע הטבעי יוצר/מונע widow/orphan בכל המצבים.
+
+
+## 2026-10-28 — אימות orphan diagnostic מתוך artifact
+
+- ריצת CLI `40670450381` עברה את ה-fixture `--test-orphan-diagnostic` ואת assertion. הורדתי את artifact `12806869382` ופתחתי את `orphan-diagnostic-report.json` בפועל.
+- נמצא בדיוק ממצא `orphan` אחד, חומרה `medium`, `renderedLineCount=1`, רוחב שורה 115px, `balanceFallback='none'`, `balanceFallbackSparseLine=null`, `splitDiagnostics` מלא, `childRect` מדוד, ו-0 browser runtime errors. לכן תיקון ה-scope נבדק בפועל והנתונים נשמרו ב-artifact.
+- סייג: ה-fixture משנה node במודל לצורך בדיקת מסלול האבחון ומחזיר אותו מיד ל-baseline. הוא מוכיח שאין ReferenceError ושחוזה הממצא נוצר; הוא אינו הוכחה שהמנוע הטבעי יוצר או מתקן orphan בכל תנאי העימוד.
