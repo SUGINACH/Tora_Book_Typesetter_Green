@@ -1035,3 +1035,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - הורדתי ובדקתי את ZIP של run `40668702912`: ה-assertion של overflow עבר, אבל ה-artifact לא כלל את `body-overflow-report.json` או את ה-summary שלו. הבדיקה הייתה מוצלחת אך הראיות שלה לא נשמרו לעיון חוזר.
 - Commit `952d08a691537568e71f97511f5b2114c0a337c1` מוסיף את שני הקבצים ל-`Upload smoke reports`. נדרש run חדש כדי לאמת שמירת הראיות ולבדוק את JSON עצמו.
+
+
+## 2026-10-28 — דוח overflow אומת ישירות מתוך artifact
+
+- Run `40669548960` הסתיים `success`. הורדתי ופתחתי את artifact `12807911634`, ואימתתי ב-Node את `body-overflow-report.json`: 13 עמודים; `testBodyOverflow=true`; ממצא אחד `container-overlap/high` בעמוד DOM index 4 (`ג`), `textOverflowPx=3906.38`, `footnoteOverlapPx=0`, עם preview ומסר. סיכום הדוח: 3 findings (1 overlap, 2 sparse-line).
+- ה-artifact מכיל כעת גם את `body-overflow-report.json` וגם `body-overflow-summary.md`. הוכחת ה-fixture וה-retention עברו; בדיקות overflow טבעי/עמוד/PDF עדיין אינן מכוסות במלואן.
