@@ -992,3 +992,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - ריצת CLI על `6f09962c41caaac6239c8f07a917ad4b9268e16c` עברה את פקודת ה-fixture אך נכשלה ב-assertion: `testBodyOverflow=true`, `container-overlap` לא הופיע, ו-`issues=[]` לממצאי overlap. השער נשמר; אין לעקוף את הכשל.
 - ה-fixture עודכן לבחור את האלמנט האחרון הנראה לפי selector מלא של פסקאות וכותרות שמשמש את האודיט, ולהזריק `translateY(3000px)` אחרי extract ולפני audit. Commit `956193869a7b3537628b7d86000cf01eceae9e49`; נדרשת ריצה חדשה. אם לא יופיע ממצא, יש לחקור את זרימת ה-page→DOM ואת קריאת ה-audit.
+
+
+## 2026-10-28 — רגרסיית overflow: תיקון syntax
+
+- CI על `2119245980bbb92c937e4f5dd9d70179839faecd` נעצר בשלב `node --check` בגלל הצהרה כפולה של `const flow` בתוך אותו בלוק fixture; לכן לא התקיימה בדיקת overflow.
+- תיקון `39875356aa6460d2ca806245596fc58376621739`: binding שני הוחלף ל-`targetFlow`. עדיין נדרש אימות ה-CI העדכני של fixture ושל predicate `container-overlap`.
