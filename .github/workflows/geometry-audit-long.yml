@@ -563,7 +563,10 @@ jobs:
               sparseFindings:issues.length,chapterEndFindings:issues.filter(i=>i.isChapterEnd).length,sparseCoverage:'PASS'}));
           }
           NODE
+      # Deferred by the explicit V23 work constraint: do not investigate DOM page 376
+      # until all other issue families are resolved and the deferral is deliberately lifted.
       - name: Run targeted causal trace for known medium imbalance
+        if: false
         run: |
           node tools/geometry-audit-cli.js \
             --input ./very_long_test_text.txt \
