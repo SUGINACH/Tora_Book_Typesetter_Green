@@ -16,7 +16,7 @@
 
 | משפחת בעיה | implemented | exercised ב-CI | asserted ב-CI | מצב מסמך מלא ידוע | הפער שנותר / תנאי סגירה |
 |---|---|---|---|---|---|
-| Widow / orphan | חלקי: `auditWidowOrphan` וניתוח שורות | לא הוכח ב-fixture ייעודי ב-CI הנוכחי | לא הוכח שער קבלה ייעודי | לא הוכח כיסוי מלא | fixtures מבודדים לראש/סוף טור ועמוד, שורות Range מדודות, positive + negative controls |
+| Widow / orphan | חלקי: `auditWidowOrphan` וניתוח שורות; תוקן scope של fallback metadata ב-orphan | כן — injected orphan model-node ב-CLI run `40670450381`; natural renderer trigger עדיין לא הוכח | כן — ממצא אחד orphan/medium עם שורה אחת, metadata, rect ו-0 runtime errors | long audit עדיין נדרש ל-natural trigger; הזרקה אינה הוכחת איכות טבעית | fixtures מבודדים לראש/סוף טור ועמוד, שורות Range מדודות, positive + negative controls; להוסיף widow-specific fixture |
 | Runt בשורת p-cut | חלקי: בדיקות שורה/רוחב | לא הוכח שכל הספים הופעלו | לא הוכח שער לכל סף | ממצאים היסטוריים; כיסוי לא מלא | למדוד RTL line fragments, רוחב שורה אחרונה, ולכסות סף/חריגים |
 | איזון טורים | כן: imbalance + candidate/capacity ledger | כן: balance-capacity fixture | כן: ledger/capacity assertions | נותרו 9 ממצאים ב-baseline ההיסטורי | כל ממצא דורש predicate, סיבתיות ו-counterfactual; עמוד 376 מושהה |
 | rollback / נסיגת איזון | כן: final-justify telemetry | כן: long audit | כן: rollback residual diagnostics | telemetry קיים, לא כל rollback בהכרח פגם | לקשור attempt → correction → rollback → final geometry לכל מקרה |
