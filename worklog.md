@@ -3867,3 +3867,10 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 - הוספתי `--test-widow-diagnostic` ב-`tools/geometry-audit-cli.js` (commit `23a6d6d599e8401f4f6c88b3a1d41494fe71afcf`). המצב מזריק זמנית node `p-end` בן שורה אחת בראש טור במודל שנמדד, מריץ את האודיט ומשחזר את המודל לפני בדיקות integrity.
 - נוסף CI assertion שמחייב בדיוק ממצא `widow` אחד בחומרה medium, `tokenId`, טקסט ותיבת גאומטריה תקינים, וללא browser runtime errors; הדוח נשמר ב-artifact (commit `17639657a8cb7c69a78eb2d303edcc2f5e281fb2`).
 - **ממתין לאימות:** ה-fixture המוזרק בודק את מסלול האבחון בלבד. טריגר טבעי של widow/orphan והערכת המנוע לאורך ראש/סוף עמוד עדיין פתוחים.
+
+
+## 2026-10-28 — חוזה tokenId מפורש לממצא widow
+
+- רגרסיית widow ב-run `40670974338` הפעילה את הענף והחזירה ממצא `widow/medium` ללא runtime errors, אך ה-assertion נכשל כי `tokenId` לא הופיע ב-JSON: node המודל מה-fixture לא נשא מזהה.
+- תיקנתי את חוזה הממצא ב-`geometry-audit.js` (commit `f101b76da55f2c166eca120b4e15962e82692b39`): `tokenId` נלקח מה-node, אחר כך מ-`data-token-id` ב-DOM, ואם אין מזהה — נרשם `null` במפורש במקום להשמיט את השדה. כך דוח לא מסתיר חוסר זהות כאילו המידע כלל לא קיים.
+- נדרשת ריצת CLI עדכנית; אין לסמן את widow regression כעוברת עד שה-assertion המלא עובר ונשמר artifact.
