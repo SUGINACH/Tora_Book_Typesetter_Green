@@ -992,18 +992,19 @@ async function main() {
                 if (!candidates.length) throw new Error('Body-overflow regression could not find a visible body paragraph');
                 const target = candidates.reduce((best, item) => !best || item.rect.bottom > best.rect.bottom ? item : best, null);
                 target.el.setAttribute('data-geometry-audit-test-body-overflow', 'true');
-                // Transform changes only the measured box, not normal flow or source text.
-                // Keep a restoration record so the injected geometry cannot leak into
-                // subsequent parenthesis/conservation integrity snapshots.
+                // Keep the mutation target and its prior inline style. Extract the
+                // canonical model before injection so integrity snapshots remain baseline.
                 window.__geomAuditTestBodyOverflowRestore = {
                     el: target.el,
                     value: target.el.style.getPropertyValue('transform'),
                     priority: target.el.style.getPropertyPriority('transform')
                 };
-                target.el.style.setProperty('transform', 'translateY(300px)', 'important');
-                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             }
             const model = window.__geomAudit.extract();
+            if (testBodyOverflow && window.__geomAuditTestBodyOverflowRestore) {
+                window.__geomAuditTestBodyOverflowRestore.el.style.setProperty('transform', 'translateY(300px)', 'important');
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            }
             const audit = window.__geomAudit.audit(model);
             if (testBodyOverflow && window.__geomAuditTestBodyOverflowRestore) {
                 const saved = window.__geomAuditTestBodyOverflowRestore;
