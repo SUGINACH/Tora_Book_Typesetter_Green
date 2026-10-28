@@ -3826,3 +3826,10 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 - ריצת `Geometry audit CLI` מס' `40669548960` הסתיימה `success`. הורדתי את ה-artifact `12807911634`, פתחתי את ZIP ובדקתי את `body-overflow-report.json` בפועל באמצעות Node, לא רק את קוד היציאה.
 - הדוח כולל 13 עמודים, `testBodyOverflow=true`, וממצא אחד `container-overlap` בחומרה `high` בעמוד DOM index 4 (תווית `ג`): `textOverflowPx=3906.38`, `footnoteOverlapPx=0`, עם `lastTextPreview` והודעת ממצא. הסיכום מכיל 3 ממצאים בסך הכול: overlap אחד ו-2 sparse-line. בכך הוכח שה-fixture יוצר overflow והאודיט מפיק ממצא עם ראיה גאומטרית.
 - ה-artifact החדש אכן כולל `body-overflow-report.json` ו-`body-overflow-summary.md`; הפער בשימור הראיות תוקן. עדיין יש להפריד בין הוכחת הזרקה מבוקרת זו לבין בדיקות clipping טבעיות וגבולות PDF.
+
+
+## 2026-10-28 — מטריצת כיסוי עצמאית למשפחות בעיות
+
+- הוספתי `V23/ISSUE_COVERAGE_MATRIX_2026-10-28.md` (commit `a45b9cb811a3d8d818a639cab1f0d32bd09e81a7`) כמימוש של דרישת N3 בקטלוג: לכל משפחת בעיה יש עמודות נפרדות ל-implemented, exercised, asserted, מצב long-document ופער הסגירה.
+- המטריצה מבדילה בין כיסוי קיים לבין הוכחה שהטריגר הופעל. היא מסמנת במפורש כפתוחים, בין השאר: widow/orphan ו-runt, heading-bottom, page-bound clipping, footnote overlap/reflow, side-note overlap, font fallback/tofu/U+E000, TOC pagination, HTML/PDF parity ומטריצת רוחב/גופן/scale. אין לסמן אותם PASS משום שאינם מופיעים ב-issue inventory הנוכחי.
+- המסמך הוא מפת פערים ולא טענה שהבעיות הללו תוקנו. המשך העבודה צריך לסגור משפחות לפי הפרוטוקול, עם fixture ו-long gate לכל אחת.
