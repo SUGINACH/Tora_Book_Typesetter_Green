@@ -1016,3 +1016,10 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - מסלול `auditContainerGaps` מחשב `contentStartY` לפי כותרת H2 בעמוד עצמו; צמצום body-flow על עמוד כזה עלול לגרום ל-`zero-capacity` לפני מדידת overflow. זו הייתה החרגה מוקדמת נוספת שלא טופלה בבחירת ה-fixture הקודמת.
 - Commit `c369fce9c480a4985fc92e63b7841291283e8187` בוחר עמוד ללא כותרת/שער פרק גם בעמוד היעד וגם בעמוד הבא. אימות ה-CI העדכני עדיין נדרש.
+
+
+## 2026-10-28 — fixture רב-עמודי לבדיקת overflow
+
+- ה-fixture הקצר הקודם לא הכיל עמוד גוף שעבר את כל תנאי הזכאות של בדיקת overflow; הפקודה נכשלה ב-`Body-overflow regression requires a non-boundary rendered body page` לפני הפעלת האודיט.
+- נוסף `tests/fixtures/body-overflow-regression.txt` עם 18 פסקאות גוף, וה-CI הועבר להריץ את `--test-body-overflow` על קובץ זה במקום על smoke fixture. commits: `0ad7a01ebf693a4c7157e7e22b9491d42d754ac7`, `d213d60ec7ad859e0ae5093a81f5d6de0594abf2`.
+- אימות מלא ממתין לריצת CI חדשה; אין לסמן overflow כפתור עד שה-trigger וה-finding נראים בדוח.
