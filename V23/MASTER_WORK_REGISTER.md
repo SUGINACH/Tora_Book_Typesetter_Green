@@ -1047,3 +1047,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - נוסף `V23/ISSUE_COVERAGE_MATRIX_2026-10-28.md` ב-commit `a45b9cb811a3d8d818a639cab1f0d32bd09e81a7`. הוא מפריד לכל משפחת בעיה בין קוד קיים, trigger exercised, assertion, מצב במסמך המלא והפער שנותר.
 - המטריצה מבהירה ש-widow/orphan, runt, heading-bottom, page-bound clipping, footnote overlap/reflow, side-note overlap, fonts/tofu/U+E000, TOC, HTML/PDF parity ומטריצת סביבות אינם מוכחים כפתורים ב-CI הנוכחי. אלה נשארים משימות פתוחות, לא PASS שקט.
+
+
+## 2026-10-28 — אכיפת השהיית page 376
+
+- זוהה ש-workflow עדיין מפעיל `--step-audit-page-indexes 376`, למרות שהחקירה הושהתה עד סגירת יתר משפחות הבעיות.
+- Commit `20189a3244358e00cf75cbe8d0f758f4f4e0b2bd` מוסיף `if: false` והערה מפורשת לשלב ה-targeted causal trace. אין להשתמש בנתוני page 376 עד להסרת ההשהיה במפורש. נדרשת ריצת long audit חדשה כדי לאמת את כל שאר השערים ולשמור PDF/artifacts בלי חקירת העמוד המושהה.
