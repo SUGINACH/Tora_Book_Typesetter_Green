@@ -3855,3 +3855,8 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 - ריצת CLI `40670450381` עברה את ה-fixture `--test-orphan-diagnostic` ואת assertion. הורדתי את artifact `12806869382` ופתחתי את `orphan-diagnostic-report.json` בפועל.
 - נמצא בדיוק ממצא `orphan` אחד, חומרה `medium`, `renderedLineCount=1`, רוחב שורה 115px, `balanceFallback='none'`, `balanceFallbackSparseLine=null`, `splitDiagnostics` מלא, `childRect` מדוד, ו-0 browser runtime errors. לכן תיקון ה-scope נבדק בפועל והנתונים נשמרו ב-artifact.
 - סייג: ה-fixture משנה node במודל לצורך בדיקת מסלול האבחון ומחזיר אותו מיד ל-baseline. הוא מוכיח שאין ReferenceError ושחוזה הממצא נוצר; הוא אינו הוכחה שהמנוע הטבעי יוצר או מתקן orphan בכל תנאי העימוד.
+
+
+## 2026-10-28 — עדכון מטריצת widow/orphan לאחר בדיקת הזרקה
+
+- עדכנתי את שורת Widow/orphan ב-`V23/ISSUE_COVERAGE_MATRIX_2026-10-28.md` (commit `eda5a54adbf0f2256c5cb0f4b3ebb0d76492f804`) להבחין בין הוכחת מסלול orphan מוזרק שעברה לבין טריגר טבעי שעדיין לא הוכח. אין לסגור את משפחת widow/orphan עד להוספת בדיקת widow ולבדיקת renderer טבעית/מטריצת מיקומים.
