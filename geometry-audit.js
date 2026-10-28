@@ -1702,7 +1702,7 @@ function auditContainerGaps(page, issues) {
     if (textOverflowPx > 0.5 || footnoteOverlapPx > 0.5) {
         const overlap = Math.max(textOverflowPx, footnoteOverlapPx);
         issues.push({
-            type: 'container-overlap',
+            kind: 'container-overlap',
             severity: 'high',
             pageIdx: page.idx,
             pageLabel: page.label,
