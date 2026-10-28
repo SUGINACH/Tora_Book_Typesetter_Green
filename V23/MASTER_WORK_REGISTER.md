@@ -1076,3 +1076,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - נוסף `--test-widow-diagnostic` ב-commit `23a6d6d599e8401f4f6c88b3a1d41494fe71afcf`; הוא מזריק p-end בן שורה אחת בתחילת טור, מריץ audit ומשחזר את המודל.
 - CI assertion ו-retention ב-commit `17639657a8cb7c69a78eb2d303edcc2f5e281fb2` מחייבים ממצא `widow/medium` יחיד עם tokenId, טקסט ותיבה מדודה, ללא runtime errors. נדרש CI; בדיקת trigger טבעי נשארת פתוחה.
+
+
+## 2026-10-28 — widow tokenId schema correction
+
+- CI run `40670974338` הפיק ממצא widow ללא `tokenId` (הערך היה undefined ונשמט מ-JSON), ולכן ה-assertion נכשל למרות שהענף רץ ללא runtime error.
+- Commit `f101b76da55f2c166eca120b4e15962e82692b39` מוסיף fallback ל-`data-token-id` ומייצג מזהה חסר כ-`null` מפורש. יש להריץ CI מחדש ולאמת שהדוח מכיל את המפתח ושאר ה-contract תקין.
