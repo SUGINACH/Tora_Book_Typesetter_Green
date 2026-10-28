@@ -1041,3 +1041,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - Run `40669548960` הסתיים `success`. הורדתי ופתחתי את artifact `12807911634`, ואימתתי ב-Node את `body-overflow-report.json`: 13 עמודים; `testBodyOverflow=true`; ממצא אחד `container-overlap/high` בעמוד DOM index 4 (`ג`), `textOverflowPx=3906.38`, `footnoteOverlapPx=0`, עם preview ומסר. סיכום הדוח: 3 findings (1 overlap, 2 sparse-line).
 - ה-artifact מכיל כעת גם את `body-overflow-report.json` וגם `body-overflow-summary.md`. הוכחת ה-fixture וה-retention עברו; בדיקות overflow טבעי/עמוד/PDF עדיין אינן מכוסות במלואן.
+
+
+## 2026-10-28 — N3: מיפוי issue→test→gate
+
+- נוסף `V23/ISSUE_COVERAGE_MATRIX_2026-10-28.md` ב-commit `a45b9cb811a3d8d818a639cab1f0d32bd09e81a7`. הוא מפריד לכל משפחת בעיה בין קוד קיים, trigger exercised, assertion, מצב במסמך המלא והפער שנותר.
+- המטריצה מבהירה ש-widow/orphan, runt, heading-bottom, page-bound clipping, footnote overlap/reflow, side-note overlap, fonts/tofu/U+E000, TOC, HTML/PDF parity ומטריצת סביבות אינם מוכחים כפתורים ב-CI הנוכחי. אלה נשארים משימות פתוחות, לא PASS שקט.
