@@ -215,9 +215,11 @@ jobs:
             console.error('The final document page must be excluded from sparse-page findings. Findings:', sparse, 'audit summary:', report.audit?.summary);
             process.exit(1);
           }
-          const sparsePageAudit = report.audit?.sparsePageAudit || report.audit?.diagnostics?.sparsePageAudit;
-          if (sparsePageAudit && !JSON.stringify(sparsePageAudit).includes('document-end')) {
-            console.error('Sparse-page audit must preserve the explicit document-end exclusion:', sparsePageAudit);
+          const sparsePageAudit = report.audit?.checks?.sparsePage;
+          if (!sparsePageAudit ||
+              !(sparsePageAudit.excludedReasons?.['document-end'] > 0) ||
+              sparsePageAudit.coverageComplete !== true) {
+            console.error('Sparse-page audit must explicitly record document-end exclusion and complete page coverage:', sparsePageAudit);
             process.exit(1);
           }
           if (brackets.length === 0) {
