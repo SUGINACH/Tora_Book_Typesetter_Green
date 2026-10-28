@@ -987,10 +987,13 @@ async function main() {
                     if (!el.querySelector('.page-body-flow p') || index >= pageEls.length - 1) return false;
                     const next = pageEls[index + 1];
                     const flow = el.querySelector('.page-body-flow');
+                    const chapterHeadingSelector = '.title-level-2-standalone, .title-level-1-standalone, .main-shaar-page, .sub-shaar-page';
                     // auditContainerGaps intentionally excludes chapter ends and the
-                    // document end before measuring overflow. Pick a page eligible for
-                    // the same predicate, rather than injecting into an excluded page.
-                    if (next.querySelector('.title-level-2-standalone, .title-level-1-standalone, .main-shaar-page, .sub-shaar-page')) return false;
+                    // document end, and computes capacity after a leading H2. The fixture
+                    // shrinks body-flow to 1px, so exclude leading chapter headings on
+                    // BOTH pages to ensure the overflow predicate remains reachable.
+                    if (el.querySelector(chapterHeadingSelector)) return false;
+                    if (next.querySelector(chapterHeadingSelector)) return false;
                     if (flow?.lastElementChild?.classList.contains('sec-divider-wrap')) return false;
                     return true;
                 });
