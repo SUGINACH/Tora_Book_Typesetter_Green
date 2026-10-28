@@ -257,6 +257,33 @@ jobs:
             orphanDiagnosticRegression: 'PASS'
           }));
           NODE
+      - name: Run injected widow-diagnostic regression
+        run: node tools/geometry-audit-cli.js --input ./tests/fixtures/geometry-audit-smoke.txt --report ./artifacts/widow-diagnostic-report.json --summary ./artifacts/widow-diagnostic-summary.md --fail-on none --test-widow-diagnostic
+      - name: Assert one-line continued p-end widow diagnostics are emitted
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('./artifacts/widow-diagnostic-report.json', 'utf8'));
+          const widows = (report.audit?.issues || []).filter(issue => issue.kind === 'widow');
+          const valid = issue => issue.severity === 'medium' &&
+            issue.tokenId !== undefined &&
+            issue.childRect && ['x','y','w','h'].every(key => Number.isFinite(issue.childRect[key])) &&
+            typeof issue.pText === 'string' && issue.pText.length > 0;
+          if (report.run?.testWidowDiagnostic !== true || widows.length !== 1 || !valid(widows[0]) ||
+              (report.runtime?.pageErrors || []).length) {
+            console.error('Injected one-line continued p-end must produce one complete widow diagnostic without runtime errors:', {
+              testWidowDiagnostic: report.run?.testWidowDiagnostic,
+              widows,
+              pageErrors: report.runtime?.pageErrors
+            });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            widowDiagnosticCount: widows.length,
+            tokenIdPresent: widows[0].tokenId !== undefined,
+            widowDiagnosticRegression: 'PASS'
+          }));
+          NODE
       - name: Run sparse-page and square-bracket diagnostic fixture
         run: node tools/geometry-audit-cli.js --input ./tests/fixtures/geometry-audit-diagnostics-smoke.txt --report ./artifacts/diagnostics-smoke-report.json --summary ./artifacts/diagnostics-smoke-summary.md --fail-on none
       - name: Assert sparse-page and square-bracket diagnostics
@@ -419,4 +446,6 @@ jobs:
             artifacts/body-overflow-summary.md
             artifacts/orphan-diagnostic-report.json
             artifacts/orphan-diagnostic-summary.md
+            artifacts/widow-diagnostic-report.json
+            artifacts/widow-diagnostic-summary.md
           if-no-files-found: ignore
