@@ -199,7 +199,7 @@ jobs:
           console.log(JSON.stringify({ missingColumnElementFindings: missing.length, distinctClassification: 'PASS' }));
           NODE
       - name: Run injected body-overflow geometry regression
-        run: node tools/geometry-audit-cli.js --input ./tests/fixtures/geometry-audit-smoke.txt --report ./artifacts/body-overflow-report.json --summary ./artifacts/body-overflow-summary.md --fail-on none --test-body-overflow
+        run: node tools/geometry-audit-cli.js --input ./tests/fixtures/body-overflow-regression.txt --report ./artifacts/body-overflow-report.json --summary ./artifacts/body-overflow-summary.md --fail-on none --test-body-overflow
       - name: Assert body overflow is surfaced as a high-severity geometry finding
         run: |
           node - <<'NODE'
