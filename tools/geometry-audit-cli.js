@@ -13,7 +13,7 @@ const crypto = require('node:crypto');
 function parseArgs(argv) {
     const o = { input: null, settings: null, report: './artifacts/geometry-audit.json',
         summary: './artifacts/geometry-audit-summary.md', fullModel: false, failOn: 'high',
-        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, testBodyOverflow: false, stepAuditMaxEvents:4000, stepAuditMaxElements:1200, stepAuditTextChars:180, stepAuditNoLineRects:false, stepAuditNoComputedStyle:false, stepAuditDisabled:false, stepAuditPageIndexes:null, screenshotsDir:null, screenshotLabel:'render', screenshotMaxPerKind:3, help: false };
+        timeoutMs: 180000, viewportWidth: 1440, viewportHeight: 1000, repeatCheck: false, requireOrnaments: false, requireGeometryFeatures: false, requireNoteMarkerLineDiagnostics: false, testEmptyColumnBalance: false, testMissingColumnElement: false, testBodyOverflow: false, testOrphanDiagnostic: false, stepAuditMaxEvents:4000, stepAuditMaxElements:1200, stepAuditTextChars:180, stepAuditNoLineRects:false, stepAuditNoComputedStyle:false, stepAuditDisabled:false, stepAuditPageIndexes:null, screenshotsDir:null, screenshotLabel:'render', screenshotMaxPerKind:3, help: false };
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         const take = () => { if (i + 1 >= argv.length) throw new Error('Missing value for ' + arg); return argv[++i]; };
@@ -45,6 +45,7 @@ function parseArgs(argv) {
             }
             case '--test-missing-column-element': o.testMissingColumnElement = true; break;
             case '--test-body-overflow': o.testBodyOverflow = true; break;
+            case '--test-orphan-diagnostic': o.testOrphanDiagnostic = true; break;
             case '--fail-on': o.failOn = take(); break;
             case '--timeout-ms': o.timeoutMs = Number(take()); break;
             case '--viewport-width': o.viewportWidth = Number(take()); break;
@@ -64,7 +65,7 @@ function help() {
     process.stdout.write('Geometry audit CLI\nRequired: --input <text-file>\n' +
       'Options: --settings <json-file>, --report <json-file>, --summary <md-file>, --full-model, --repeat-check,\n' +
       '--fail-on <high|medium|low|none>, --timeout-ms <number>, --viewport-width <number>, --viewport-height <number>, --require-ornaments, --require-geometry-features, --require-note-marker-line-diagnostics,\n' +
-      '--test-empty-column-balance, --test-missing-column-element, --test-body-overflow (regression tests only),\n' +
+      '--test-empty-column-balance, --test-missing-column-element, --test-body-overflow, --test-orphan-diagnostic (regression tests only),\n' +
       '--step-audit-max-events <n>, --step-audit-max-elements <n>, --step-audit-text-chars <n>, --step-audit-page-indexes <i,j,...> (targeted causal trace), --step-audit-no-line-rects, --step-audit-no-computed-style, --step-audit-disabled,\n' +
       '--screenshots-dir <dir>, --screenshot-label <label>, --screenshot-max-per-kind <1..10> (real rendered issue-page captures; excludes deferred indexes 375/376)\n');
 }
@@ -939,7 +940,7 @@ async function main() {
             if (document.fonts && document.fonts.ready) await document.fonts.ready;
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         });
-        const data = await page.evaluate(async ({ includeFullModel, testEmptyColumnBalance, testMissingColumnElement, testBodyOverflow }) => {
+        const data = await page.evaluate(async ({ includeFullModel, testEmptyColumnBalance, testMissingColumnElement, testBodyOverflow, testOrphanDiagnostic }) => {
             if (!window.__geomAudit) throw new Error('Geometry audit API unavailable');
             if (testEmptyColumnBalance) {
                 const blocks = Array.from(document.querySelectorAll('#book-container .block-2col'));
@@ -1031,7 +1032,38 @@ async function main() {
                     }]))
                 };
             }
+            let orphanDiagnosticMutation = null;
             const model = window.__geomAudit.extract();
+            if (testOrphanDiagnostic) {
+                const findColumn = node => {
+                    if (!node || typeof node !== 'object') return null;
+                    if (node.type === 'column') {
+                        const paragraphs = (node.children || []).filter(child =>
+                            ['p', 'p-cut', 'p-end'].includes(child.type) &&
+                            Array.isArray(child.lines) && child.lines.length > 0);
+                        if (paragraphs.length) return { column: node, target: paragraphs[paragraphs.length - 1] };
+                    }
+                    for (const child of node.children || []) {
+                        const found = findColumn(child);
+                        if (found) return found;
+                    }
+                    return null;
+                };
+                const found = findColumn({ children: model.pages || [] });
+                if (!found) throw new Error('Orphan diagnostic regression requires a measured paragraph inside a column');
+                const target = found.target;
+                orphanDiagnosticMutation = {
+                    target,
+                    type: target.type,
+                    lines: target.lines,
+                    isContinuation: target.isContinuation
+                };
+                // Fault-inject the audit model only, not the rendered DOM/source.
+                // Restore immediately after audit so conservation/integrity checks use baseline.
+                target.type = 'p-cut';
+                target.lines = [target.lines[target.lines.length - 1]];
+                target.isContinuation = true;
+            }
             if (testBodyOverflow && window.__geomAuditTestBodyOverflowRestore) {
                 // Shrink only the measured body-flow boundary while leaving its text
                 // boxes in place. This directly exercises the container-overlap predicate
@@ -1065,6 +1097,11 @@ async function main() {
                 }
             }
             const audit = window.__geomAudit.audit(model);
+            if (orphanDiagnosticMutation) {
+                orphanDiagnosticMutation.target.type = orphanDiagnosticMutation.type;
+                orphanDiagnosticMutation.target.lines = orphanDiagnosticMutation.lines;
+                orphanDiagnosticMutation.target.isContinuation = orphanDiagnosticMutation.isContinuation;
+            }
             if (testBodyOverflow && window.__geomAuditTestBodyOverflowRestore) {
                 const saved = window.__geomAuditTestBodyOverflowRestore;
                 for (const [name, value] of Object.entries(saved.styles)) {
@@ -1591,7 +1628,7 @@ async function main() {
                 bodyScrollHeight:document.body.scrollHeight,
                 bookContainerScrollHeight:document.getElementById('book-container')?.scrollHeight ?? null
             };
-        }, { includeFullModel: args.fullModel, testEmptyColumnBalance: args.testEmptyColumnBalance, testMissingColumnElement: args.testMissingColumnElement, testBodyOverflow: args.testBodyOverflow });
+        }, { includeFullModel: args.fullModel, testEmptyColumnBalance: args.testEmptyColumnBalance, testMissingColumnElement: args.testMissingColumnElement, testBodyOverflow: args.testBodyOverflow, testOrphanDiagnostic: args.testOrphanDiagnostic });
         const issueScreenshotCapture = await captureIssueScreenshots(page, data, args, root);
 
         const allIssues = Array.isArray(data.issues) ? data.issues : [];
@@ -1827,7 +1864,7 @@ async function main() {
             run:{ input:path.relative(root,inputPath).split(path.sep).join('/'), inputBytes:Buffer.byteLength(inputText,'utf8'),
               generatedAt:new Date().toISOString(), branch:process.env.GITHUB_REF_NAME || null,
               gitCommit:process.env.GITHUB_SHA || null, viewport:{width:args.viewportWidth,height:args.viewportHeight,deviceScaleFactor:1},
-              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, issueScreenshotCapture, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, testBodyOverflow:args.testBodyOverflow, stepAudit:{enabled:!args.stepAuditDisabled, disabledByRequest:args.stepAuditDisabled, disableReason:args.stepAuditDisabled?'full-document-stability-policy':null, maxEvents:args.stepAuditMaxEvents, maxElements:args.stepAuditMaxElements, textChars:args.stepAuditTextChars, includeLineRects:!args.stepAuditNoLineRects, includeComputedStyle:!args.stepAuditNoComputedStyle, targetPageIndexes:args.stepAuditPageIndexes}, browser:'Chromium headless' },
+              renderMs:Date.now()-started, renderResult, determinismCheck, settings, settingsSource, externalHeaderAssetsLoaded:registeredExternalHeaderAssets, issueScreenshotCapture, activeGeometryGate:{enabled:args.requireOrnaments || args.requireGeometryFeatures, passed:activeGeometryGateFailures.length===0, findingCount:activeGeometryGateFailures.length, findings:activeGeometryGateFailures, nonBlockingContainmentRoundingCount: nonBlockingRoundingFindings.length, nonBlockingContainmentRoundingPolicy:'only finite note-marker protrusions from 0px through 3px; findings remain in audit issue inventory', blockingUnexpectedContainmentRoundingCount: (Array.isArray(data.issues) ? data.issues : []).filter(issue => issue.kind === 'containment-rounding' && !(issue.childType === 'note-marker' && Number.isFinite(issue.overflowPx) && issue.overflowPx >= 0 && issue.overflowPx <= 3)).length}, failOn:args.failOn, testEmptyColumnBalance:args.testEmptyColumnBalance, testMissingColumnElement:args.testMissingColumnElement, testBodyOverflow:args.testBodyOverflow, testOrphanDiagnostic:args.testOrphanDiagnostic, stepAudit:{enabled:!args.stepAuditDisabled, disabledByRequest:args.stepAuditDisabled, disableReason:args.stepAuditDisabled?'full-document-stability-policy':null, maxEvents:args.stepAuditMaxEvents, maxElements:args.stepAuditMaxElements, textChars:args.stepAuditTextChars, includeLineRects:!args.stepAuditNoLineRects, includeComputedStyle:!args.stepAuditNoComputedStyle, targetPageIndexes:args.stepAuditPageIndexes}, browser:'Chromium headless' },
             pageCount:data.pageCount,
             geometry:{stats:data.stats,ornamentDomCoverage:data.ornamentDomCoverage,headerTypeSelection:data.headerTypeSelection,versoHeaderTypeSelection:data.versoHeaderTypeSelection,headerPageSelectionAudit:data.headerPageSelectionAudit,decorativeGeometryDomCoverage:data.decorativeGeometryDomCoverage,headerOrnamentGeometryAudit:data.headerOrnamentGeometryAudit,fontsStatus:data.fontsStatus,fontPreflight:data.fontPreflight,footnoteReflowDiagnostics:data.footnoteReflowDiagnostics,layoutDiagnostics:data.layoutDiagnostics,layoutDecisionRecords:data.layoutDecisionRecords,layoutDecisionRecordAudit,stepByStepAudit:data.stageByStepAudit,parenthesisScopeSummary:data.parenthesisScopeSummary,parenthesisScopeDiagnosticError:data.parenthesisScopeDiagnosticError,parenFontCounterfactualSummary:data.parenFontCounterfactualSummary,parenFontCounterfactualError:data.parenFontCounterfactualError,textConservationAudit:data.textConservationAudit,sideNoteFitCorrections:data.sideNoteFitCorrections,bodyScrollHeight:data.bodyScrollHeight,bookContainerScrollHeight:data.bookContainerScrollHeight},
             audit:{summary:data.summary,issues:data.issues,checks:data.checks},
