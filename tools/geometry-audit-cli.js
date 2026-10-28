@@ -986,10 +986,23 @@ async function main() {
                     .find(el => el.querySelector('.page-body-flow p'));
                 if (!pageEl) throw new Error('Body-overflow regression requires a rendered body paragraph');
                 const flow = pageEl.querySelector('.page-body-flow');
-                const candidates = Array.from(flow.querySelectorAll('.main-column p, .single-wide-col p'))
+                const textSelector = [
+                    '.main-column p', '.single-wide-col p',
+                    '.main-column .title-level-1-standalone', '.single-wide-col .title-level-1-standalone',
+                    '.main-column .title-level-2-standalone', '.main-column .title-level-3',
+                    '.main-column .title-level-4', '.main-column .title-level-5',
+                    '.main-column .title-level-6', '.main-column .title-level-7',
+                    '.main-column .title-level-custom', '.single-wide-col .title-level-2-standalone',
+                    '.single-wide-col .title-level-3', '.single-wide-col .title-level-4',
+                    '.single-wide-col .title-level-5', '.single-wide-col .title-level-6',
+                    '.single-wide-col .title-level-7', '.single-wide-col .title-level-custom'
+                ].join(',');
+                const candidates = Array.from(flow.querySelectorAll(textSelector))
                     .map(el => ({ el, rect: el.getBoundingClientRect() }))
-                    .filter(item => item.rect.width > 0 && item.rect.height > 0);
-                if (!candidates.length) throw new Error('Body-overflow regression could not find a visible body paragraph');
+                    .filter(item => item.rect.width > 0 && item.rect.height > 0 &&
+                        !item.el.closest('.footnote-area, .margin-notes-column') &&
+                        String(item.el.getAttribute('data-raw-text') || item.el.textContent || '').trim());
+                if (!candidates.length) throw new Error('Body-overflow regression could not find a visible measured text element');
                 const target = candidates.reduce((best, item) => !best || item.rect.bottom > best.rect.bottom ? item : best, null);
                 target.el.setAttribute('data-geometry-audit-test-body-overflow', 'true');
                 // Keep the mutation target and its prior inline style. Extract the
@@ -1002,7 +1015,7 @@ async function main() {
             }
             const model = window.__geomAudit.extract();
             if (testBodyOverflow && window.__geomAuditTestBodyOverflowRestore) {
-                window.__geomAuditTestBodyOverflowRestore.el.style.setProperty('transform', 'translateY(300px)', 'important');
+                window.__geomAuditTestBodyOverflowRestore.el.style.setProperty('transform', 'translateY(3000px)', 'important');
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             }
             const audit = window.__geomAudit.audit(model);
