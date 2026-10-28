@@ -1582,6 +1582,7 @@ function auditContainerGaps(page, issues) {
     if (!pageEl) return { checked: false, reason: 'missing-page-element' };
     const pageEls = Array.from(document.querySelectorAll('#book-container .a4-page'));
     const pageIndex = pageEls.indexOf(pageEl);
+    if (pageIndex < 0) return { checked: false, reason: 'page-not-in-book-container' };
     const bodyFlow = pageEl.querySelector('.page-body-flow');
     if (!bodyFlow) {
         // These explicit renderer roles do not carry the body-flow whose terminal
@@ -1617,11 +1618,8 @@ function auditContainerGaps(page, issues) {
         nextHeadingRect && nextFlowRect && nextFlowRect.height > 0 &&
         nextHeadingRect.top < nextFlowRect.top + nextFlowRect.height * 0.45
     );
-    if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
-    // A section-end divider is a structural terminal marker, not a demand to
-    // fill the remaining page. Odd-page-start policy can insert one explicit blank
-    // page before the next section-title page, so inspect that narrowly defined
-    // two-step boundary as well as the direct transition.
+    // Specific terminal-divider semantics must win over generic chapter-end
+    // exclusion because the following sub-shaar page satisfies both predicates.
     const hasTerminalSectionDivider =
         !!bodyFlow.lastElementChild?.classList.contains('sec-divider-wrap');
     const interveningBlankPage = !!nextPage?.classList.contains('blank-page');
@@ -1645,12 +1643,14 @@ function auditContainerGaps(page, issues) {
                 : null
         };
     }
+    if (nextPageStartsChapter) return { checked: true, excluded: 'chapter-end' };
     if (pageIndex >= 0 && pageIndex === pageEls.length - 1) {
         return { checked: true, excluded: 'document-end' };
     }
 
     const textSelector = [
         '.main-column p', '.single-wide-col p',
+        '.main-column .title-level-1-standalone', '.single-wide-col .title-level-1-standalone',
         '.main-column .title-level-2-standalone',
         '.main-column .title-level-3', '.main-column .title-level-4',
         '.main-column .title-level-5', '.main-column .title-level-6',
@@ -1688,12 +1688,33 @@ function auditContainerGaps(page, issues) {
         footnoteRect && footnoteRect.width > 0 && footnoteRect.height > 0 &&
         String(footnoteArea.textContent || '').trim()
     );
-    const gapToBodyFlowBottomPx = Math.max(0, flowRect.bottom - lastTextBottom);
+    const gapToBodyFlowBottomPx = flowRect.bottom - lastTextBottom;
     const gapToFootnoteTopPx = hasVisibleFootnotes
-        ? Math.max(0, footnoteRect.top - lastTextBottom)
+        ? footnoteRect.top - lastTextBottom
         : null;
     const gapPx = hasVisibleFootnotes ? gapToFootnoteTopPx : gapToBodyFlowBottomPx;
+    const textOverflowPx = Math.max(0, lastTextBottom - flowRect.bottom);
+    const footnoteOverlapPx = hasVisibleFootnotes
+        ? Math.max(0, lastTextBottom - footnoteRect.top)
+        : 0;
 
+    // Negative geometric gaps are collisions/overflow, not zero-sized gaps.
+    if (textOverflowPx > 0.5 || footnoteOverlapPx > 0.5) {
+        const overlap = Math.max(textOverflowPx, footnoteOverlapPx);
+        issues.push({
+            type: 'container-overlap',
+            severity: 'high',
+            pageIdx: page.idx,
+            pageLabel: page.label,
+            pageClass: String(pageEl.className || ''),
+            textOverflowPx: Math.round(textOverflowPx * 100) / 100,
+            footnoteOverlapPx: Math.round(footnoteOverlapPx * 100) / 100,
+            lastTextPreview: String(last.el.getAttribute('data-raw-text') || last.el.textContent || '')
+                .replace(/\s+/g, ' ').trim().slice(-180),
+            message: `חפיפה/גלישת טקסט של ${Math.round(overlap)}px באזור גוף העמוד ${page.label}`
+        });
+        return { checked: true, finding: true, overlapPx: overlap, textOverflowPx, footnoteOverlapPx };
+    }
     if (!Number.isFinite(gapPx) || gapPx <= CONTAINER_GAP_WARN_PX) {
         return { checked: true, gapPx, hasVisibleFootnotes };
     }
@@ -1824,6 +1845,7 @@ function auditSparsePage(page, issues) {
 
     const pageEls = Array.from(document.querySelectorAll('#book-container .a4-page'));
     const pageIndex = pageEls.indexOf(pageEl);
+    if (pageIndex < 0) return { checked: false, reason: 'page-not-in-book-container' };
     const bodyFlow = pageEl.querySelector('.page-body-flow');
     if (!bodyFlow) {
         const pageClass = String(pageEl.className || '');
@@ -1903,6 +1925,7 @@ function auditSparsePage(page, issues) {
 
     const textSelector = [
         '.main-column p', '.single-wide-col p',
+        '.main-column .title-level-1-standalone', '.single-wide-col .title-level-1-standalone',
         '.main-column .title-level-2-standalone',
         '.main-column .title-level-3', '.main-column .title-level-4',
         '.main-column .title-level-5', '.main-column .title-level-6',
