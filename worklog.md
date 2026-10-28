@@ -3813,3 +3813,9 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 - ריצת `Geometry audit CLI` מס' `40668763261` על commit `32cbd21d7dff12d9358c34fd8d7fcbee15bc6299` הסתיימה `success`. כל שערי ה-CLI עברו, לרבות: smoke, no-legal-split, balance-capacity/H3, empty-column, missing-column, injected body-overflow, sparse-page/square-bracket, section-end boundary, ornaments, recto/verso headers ו-H2 ornament geometry.
 - בדיקת ה-overflow על ה-fixture הרב-עמודי עברה גם את שלב היצירה וגם את assertion שמחייב `container-overlap` בחומרה high עם מדידה חיובית ופרטי עמוד/טקסט. זו הוכחה לצינור האודיט בתנאי הזרקה מבוקרים בלבד; היא אינה מוכיחה שכל מקרי overflow טבעיים או PDF clipping מכוסים.
 - עדיין פתוח: ריצת המסמך הקנוני המלא בברירת מחדל ובעיטורים, השוואת הדוחות, בדיקת ה-PDF והשלמת מיפוי coverage לבעיות ההיסטוריות. אין לסמן את כלל העבודה כסגורה על סמך הצלחת ה-CLI בלבד.
+
+
+## 2026-10-28 — שימור ראיות ה-overflow ב-artifact
+
+- בדקתי בפועל את ZIP של CI run `40668702912` באמצעות הורדת artifact ופתיחת התוכן. נמצא שהשער `Assert body overflow...` עבר, אך `Upload smoke reports` לא כלל את `body-overflow-report.json` ואת ה-summary; לכן הראיה הישירה לא נשמרה ב-artifact אף שהבדיקה עצמה רצה.
+- תיקנתי את `.github/workflows/geometry-audit-cli.yml` ב-commit `952d08a691537568e71f97511f5b2114c0a337c1` כדי להעלות את שני הקבצים. זהו תיקון שקיפות/traceability; יש לאמת אותו ב-run חדש ולוודא שה-JSON אכן מכיל את ממצא ה-overflow הצפוי.
