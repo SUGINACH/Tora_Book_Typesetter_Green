@@ -226,6 +226,37 @@ jobs:
             overflowRegression: 'PASS'
           }));
           NODE
+      - name: Run injected orphan-diagnostic regression
+        run: node tools/geometry-audit-cli.js --input ./tests/fixtures/geometry-audit-smoke.txt --report ./artifacts/orphan-diagnostic-report.json --summary ./artifacts/orphan-diagnostic-summary.md --fail-on none --test-orphan-diagnostic
+      - name: Assert one-line p-cut orphan diagnostics are emitted without runtime errors
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('./artifacts/orphan-diagnostic-report.json', 'utf8'));
+          const orphans = (report.audit?.issues || []).filter(issue => issue.kind === 'orphan');
+          const valid = issue => issue.severity === 'medium' &&
+            issue.renderedLineCount === 1 &&
+            Array.isArray(issue.renderedLineWidths) && issue.renderedLineWidths.length === 1 &&
+            issue.childRect && ['x','y','w','h'].every(key => Number.isFinite(issue.childRect[key])) &&
+            issue.splitDiagnostics && typeof issue.splitDiagnostics === 'object' &&
+            Object.prototype.hasOwnProperty.call(issue, 'balanceFallback') &&
+            Object.prototype.hasOwnProperty.call(issue, 'balanceFallbackSparseLine');
+          if (report.run?.testOrphanDiagnostic !== true || orphans.length !== 1 || !valid(orphans[0]) ||
+              (report.runtime?.pageErrors || []).length) {
+            console.error('Injected one-line p-cut must produce one complete orphan diagnostic without runtime errors:', {
+              testOrphanDiagnostic: report.run?.testOrphanDiagnostic,
+              orphans,
+              pageErrors: report.runtime?.pageErrors
+            });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            orphanDiagnosticCount: orphans.length,
+            renderedLineCount: orphans[0].renderedLineCount,
+            fallbackMetadataPresent: true,
+            orphanDiagnosticRegression: 'PASS'
+          }));
+          NODE
       - name: Run sparse-page and square-bracket diagnostic fixture
         run: node tools/geometry-audit-cli.js --input ./tests/fixtures/geometry-audit-diagnostics-smoke.txt --report ./artifacts/diagnostics-smoke-report.json --summary ./artifacts/diagnostics-smoke-summary.md --fail-on none
       - name: Assert sparse-page and square-bracket diagnostics
@@ -386,4 +417,6 @@ jobs:
             artifacts/ornament-title-tb-summary.md
             artifacts/body-overflow-report.json
             artifacts/body-overflow-summary.md
+            artifacts/orphan-diagnostic-report.json
+            artifacts/orphan-diagnostic-summary.md
           if-no-files-found: ignore
