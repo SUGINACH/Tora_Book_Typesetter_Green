@@ -198,6 +198,34 @@ jobs:
           }
           console.log(JSON.stringify({ missingColumnElementFindings: missing.length, distinctClassification: 'PASS' }));
           NODE
+      - name: Run injected body-overflow geometry regression
+        run: node tools/geometry-audit-cli.js --input ./tests/fixtures/geometry-audit-smoke.txt --report ./artifacts/body-overflow-report.json --summary ./artifacts/body-overflow-summary.md --fail-on none --test-body-overflow
+      - name: Assert body overflow is surfaced as a high-severity geometry finding
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const report = JSON.parse(fs.readFileSync('./artifacts/body-overflow-report.json', 'utf8'));
+          const issues = report.audit?.issues || [];
+          const overflow = issues.filter(issue =>
+            issue.kind === 'container-overlap' &&
+            issue.severity === 'high' &&
+            Number(issue.textOverflowPx) > 0 &&
+            issue.pageIdx !== undefined &&
+            typeof issue.lastTextPreview === 'string');
+          if (report.run?.testBodyOverflow !== true || overflow.length === 0) {
+            console.error('Injected measured text overflow must be recorded as a high-severity container-overlap with pixel evidence:', {
+              testBodyOverflow: report.run?.testBodyOverflow,
+              overflow,
+              issues: issues.filter(issue => /overlap|overflow/i.test(issue.kind || ''))
+            });
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            injectedBodyOverflowFindings: overflow.length,
+            measuredOverflowPx: overflow.map(issue => issue.textOverflowPx),
+            overflowRegression: 'PASS'
+          }));
+          NODE
       - name: Run sparse-page and square-bracket diagnostic fixture
         run: node tools/geometry-audit-cli.js --input ./tests/fixtures/geometry-audit-diagnostics-smoke.txt --report ./artifacts/diagnostics-smoke-report.json --summary ./artifacts/diagnostics-smoke-summary.md --fail-on none
       - name: Assert sparse-page and square-bracket diagnostics
