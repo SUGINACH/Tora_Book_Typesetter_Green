@@ -1029,3 +1029,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - `Geometry audit CLI` run `40668763261` על `32cbd21d7dff12d9358c34fd8d7fcbee15bc6299` הסתיים בהצלחה. עברו כל ה-fixtures הקיימים, כולל `--test-body-overflow` על `tests/fixtures/body-overflow-regression.txt` וה-assertion שמחייב `container-overlap` high עם `textOverflowPx > 0`, page index ו-preview.
 - המשמעות מוגבלת לצינור בדיקה מוזרק ול-fixtures: עדיין נדרש long audit מלא בשתי תצורות, השוואת inventory/coverage, בדיקת PDF, ובדיקות נפרדות ל-clipping ולחפיפת הערות טבעיים. אין להכריז שכל בעיות העימוד נפתרו.
+
+
+## 2026-10-28 — artifact חסר לרגרסיית overflow
+
+- הורדתי ובדקתי את ZIP של run `40668702912`: ה-assertion של overflow עבר, אבל ה-artifact לא כלל את `body-overflow-report.json` או את ה-summary שלו. הבדיקה הייתה מוצלחת אך הראיות שלה לא נשמרו לעיון חוזר.
+- Commit `952d08a691537568e71f97511f5b2114c0a337c1` מוסיף את שני הקבצים ל-`Upload smoke reports`. נדרש run חדש כדי לאמת שמירת הראיות ולבדוק את JSON עצמו.
