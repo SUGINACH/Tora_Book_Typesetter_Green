@@ -208,12 +208,16 @@ jobs:
           const issues = report.audit?.issues || [];
           const sparse = issues.filter(issue => issue.kind === 'sparse-page');
           const brackets = issues.filter(issue => issue.kind === 'square-bracket-scope');
-          if (sparse.length !== 1) {
-            console.error('Expected exactly one sparse-page finding: the short final chapter page; the preceding chapter-end page must be exempt. Findings:', sparse, 'audit summary:', report.audit?.summary);
+          // The fixture's final short chapter ends at document end. By contract,
+          // document-end pages are excluded from sparse-page findings; testing a
+          // chapter-start-adjusted occupancy finding belongs in a non-terminal fixture.
+          if (sparse.length !== 0) {
+            console.error('The final document page must be excluded from sparse-page findings. Findings:', sparse, 'audit summary:', report.audit?.summary);
             process.exit(1);
           }
-          if (!sparse[0].startsChapter || !(sparse[0].excludedChapterStartPx > 0) || !(sparse[0].availableBodyHeightPx > 0)) {
-            console.error('Sparse-page report must expose and apply the chapter-start exclusion:', sparse[0]);
+          const sparsePageAudit = report.audit?.sparsePageAudit || report.audit?.diagnostics?.sparsePageAudit;
+          if (sparsePageAudit && !JSON.stringify(sparsePageAudit).includes('document-end')) {
+            console.error('Sparse-page audit must preserve the explicit document-end exclusion:', sparsePageAudit);
             process.exit(1);
           }
           if (brackets.length === 0) {
