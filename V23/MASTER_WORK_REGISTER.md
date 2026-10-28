@@ -1053,3 +1053,9 @@ V23 בלבד; עמוד 376 מושהה; אין מיזוג ל-V21.
 
 - זוהה ש-workflow עדיין מפעיל `--step-audit-page-indexes 376`, למרות שהחקירה הושהתה עד סגירת יתר משפחות הבעיות.
 - Commit `20189a3244358e00cf75cbe8d0f758f4f4e0b2bd` מוסיף `if: false` והערה מפורשת לשלב ה-targeted causal trace. אין להשתמש בנתוני page 376 עד להסרת ההשהיה במפורש. נדרשת ריצת long audit חדשה כדי לאמת את כל שאר השערים ולשמור PDF/artifacts בלי חקירת העמוד המושהה.
+
+
+## 2026-10-28 — orphan diagnostic scope bug + regression gate
+
+- נמצא ש-`auditWidowOrphan` השתמש ב-`balanceFallback` וב-`balanceFallbackSparseLine` מחוץ ל-scope שבו הוגדרו. התיקון המקומי בתוך ענף `p-cut` נמצא ב-commit `131d56f3f1dcfa1bc26a046f339d127c0d41cb2d`.
+- נוסף `--test-orphan-diagnostic` שמזריק model-node מסוג p-cut עם שורה אחת ומחזיר את המודל למצב baseline לאחר audit; שער CI ב-`de092f4901146191da75b3bb0a29f19a4acad548` דורש ממצא orphan מלא וללא runtime errors, ושומר את הדוח ב-artifact. נדרש CI כדי לאמת שהממצא מופק ושה-integrity נשאר תקין.
