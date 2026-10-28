@@ -3819,3 +3819,10 @@ Commits ב-`V23`: `e07c2e2a124d3cf41ca2509144e7811bf628ded3` (הזרקת בדי�
 
 - בדקתי בפועל את ZIP של CI run `40668702912` באמצעות הורדת artifact ופתיחת התוכן. נמצא שהשער `Assert body overflow...` עבר, אך `Upload smoke reports` לא כלל את `body-overflow-report.json` ואת ה-summary; לכן הראיה הישירה לא נשמרה ב-artifact אף שהבדיקה עצמה רצה.
 - תיקנתי את `.github/workflows/geometry-audit-cli.yml` ב-commit `952d08a691537568e71f97511f5b2114c0a337c1` כדי להעלות את שני הקבצים. זהו תיקון שקיפות/traceability; יש לאמת אותו ב-run חדש ולוודא שה-JSON אכן מכיל את ממצא ה-overflow הצפוי.
+
+
+## 2026-10-28 — אימות עצמאי של דוח overflow וה-artifact
+
+- ריצת `Geometry audit CLI` מס' `40669548960` הסתיימה `success`. הורדתי את ה-artifact `12807911634`, פתחתי את ZIP ובדקתי את `body-overflow-report.json` בפועל באמצעות Node, לא רק את קוד היציאה.
+- הדוח כולל 13 עמודים, `testBodyOverflow=true`, וממצא אחד `container-overlap` בחומרה `high` בעמוד DOM index 4 (תווית `ג`): `textOverflowPx=3906.38`, `footnoteOverlapPx=0`, עם `lastTextPreview` והודעת ממצא. הסיכום מכיל 3 ממצאים בסך הכול: overlap אחד ו-2 sparse-line. בכך הוכח שה-fixture יוצר overflow והאודיט מפיק ממצא עם ראיה גאומטרית.
+- ה-artifact החדש אכן כולל `body-overflow-report.json` ו-`body-overflow-summary.md`; הפער בשימור הראיות תוקן. עדיין יש להפריד בין הוכחת הזרקה מבוקרת זו לבין בדיקות clipping טבעיות וגבולות PDF.
