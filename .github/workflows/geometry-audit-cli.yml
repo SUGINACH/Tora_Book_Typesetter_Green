@@ -34,6 +34,8 @@ jobs:
             echo "Checking $file"
             node --check "$file"
           done
+      - name: Verify iframe HTML export contract
+        run: node tests/html-export-contract.test.js
       - name: Check CLI help
         run: node tools/geometry-audit-cli.js --help
       - name: Run geometry audit smoke test
